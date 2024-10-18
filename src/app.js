@@ -1,5 +1,5 @@
-const express = require('express');
-const routes = require('./routes');
+import express from 'express';
+import routes from './routes/index.js';
 
 const app = express();
 
@@ -8,4 +8,4 @@ app.use(express.json());
 // Use routes
 app.use('/api', routes);
 
-module.exports = app;
+export default app;
