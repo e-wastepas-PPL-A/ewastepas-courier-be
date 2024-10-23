@@ -5,6 +5,6 @@ import { getDropbox } from '../controllers/dropboxController.js';
 
 const router = express.Router();
 
-router.get('/dropbox/terdekat', getDropbox);
+router.get('/dropbox', getDropbox);
 
 export default router;

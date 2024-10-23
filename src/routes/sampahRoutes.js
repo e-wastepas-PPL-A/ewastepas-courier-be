@@ -4,6 +4,6 @@ import { getJenisSampah, getTotalSampah } from '../controllers/sampahController.
 const router = express.Router();
 
 router.get('/sampah/jenis', getJenisSampah);
-router.get('/sampah/total', getTotalSampah);
+router.get('/sampah/total/:id', getTotalSampah);
 
 export default router;

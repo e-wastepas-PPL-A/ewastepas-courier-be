@@ -4,7 +4,7 @@ import { getPermintaan, terimaPermintaan, getHistory } from '../controllers/penj
 const router = express.Router();
 
 router.get('/penjemputan/permintaan', getPermintaan);
-router.post('/penjemputan/terima', terimaPermintaan);
-router.get('/penjemputan/history', getHistory);
+router.post('/penjemputan/terima/:id', terimaPermintaan);
+router.get('/penjemputan/history/:id', getHistory);
 
 export default router;
