@@ -1,32 +1,45 @@
-let permintaan = [
-    { id: 101, alamat: "Jl. Raya No. 1", jenis_sampah: "Televisi", status: "Menunggu", tanggal: "2024-10-20" },
-    { id: 102, alamat: "Jl. Merdeka No. 5", jenis_sampah: "Kulkas", status: "Diterima", tanggal: "2024-10-19" },
-];
+import {prisma} from "../database.js";
 
-let history = [
-    { id: 1, alamat: "Jl. Raya No. 1", jenis_sampah: "Televisi", tanggal: "2024-10-20", status: "Selesai" },
-    { id: 2, alamat: "Jl. Merdeka No. 5", jenis_sampah: "Kulkas", tanggal: "2024-10-19", status: "Selesai" },
-];
-
-export const getPermintaan = (req, res) => {
-    res.json({ data: permintaan });
-}
-
-export const terimaPermintaan = (req, res) => {
-    const { permintaan_id } = req.body;
-    const foundPermintaanIndex = permintaan.findIndex(item => item.id === permintaan_id);
-
-    if (foundPermintaanIndex !== -1) {
-        permintaan[foundPermintaanIndex].status = "Diterima";
-        return res.json({
-            message: "Permintaan penjemputan berhasil diterima.",
-            permintaan_id
-        });
+export const getPermintaan = async (req, res) => {
+    try {
+        const permintaan = await prisma.penjemputan_sampah.findMany()
+        res.json({ data: permintaan });
+    } catch (e) {
+        res.status(500).json({ error: "Error fetching Permintaan" });
     }
-
-    return res.status(404).json({ message: "Permintaan tidak ditemukan." });
 }
 
-export const getHistory = (req, res) => {
-    res.json({ data: history });
+export const terimaPermintaan = async (req, res) => {
+    const { id } = req.params;
+    const {Status_Pengiriman} = req.body;
+    try {
+        const updatePermintaan = await prisma.penjemputan_sampah.update({
+            where: {
+                id_penjemputan: String(id)
+            },
+            data: {
+                Status_Pengiriman
+            }
+        })
+        res.json({data: updatePermintaan});
+    } catch (e) {
+        console.log(e)
+    }
+}
+
+export const getHistory = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const history = await prisma.penjemputan_sampah.findMany({
+            where: {
+                Status_Penjemputan: {
+                    equals: "Completed"
+                },
+                id_user: String(id)
+            }
+        })
+        res.json({data: history})
+    } catch (e) {
+        console.log(e)
+    }
 };
