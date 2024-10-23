@@ -1,0 +1,86 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model dropbox {
+  id_dropbox         String               @id @db.VarChar(255)
+  Alamat             String?              @db.VarChar(255)
+  Longtitude         String?              @db.VarChar(255)
+  Latitude           String?              @db.VarChar(255)
+  Created_at         DateTime?            @default(now()) @db.Timestamp(0)
+  Updated_at         DateTime?            @default(now()) @db.Timestamp(0)
+  id_user            String?              @db.VarChar(255)
+  users              users?               @relation(fields: [id_user], references: [id_user], onDelete: NoAction, onUpdate: NoAction, map: "dropbox_ibfk_1")
+  penjemputan_sampah penjemputan_sampah[]
+
+  @@index([id_user], map: "id_user")
+}
+
+model jenis_sampah {
+  id_jenis         String    @id @db.VarChar(255)
+  Nama_JenisSampah String?   @db.VarChar(255)
+  Created_at       DateTime? @default(now()) @db.Timestamp(0)
+  Updated_at       DateTime? @default(now()) @db.Timestamp(0)
+  sampah           sampah[]
+}
+
+model penjemputan_sampah {
+  id_penjemputan      String    @id @db.VarChar(255)
+  Jumlah_sampah       Int?
+  Tanggal_Penjemputan DateTime? @db.Date
+  Alamat_Penjemputan  String?   @db.VarChar(255)
+  Status_Penjemputan  String?   @db.VarChar(255)
+  Status_Pengiriman   String?   @db.VarChar(255)
+  Total_sampah        Int?
+  id_user             String?   @db.VarChar(255)
+  id_dropbox          String?   @db.VarChar(255)
+  users               users?    @relation(fields: [id_user], references: [id_user], onDelete: NoAction, onUpdate: NoAction, map: "penjemputan_sampah_ibfk_1")
+  dropbox             dropbox?  @relation(fields: [id_dropbox], references: [id_dropbox], onDelete: NoAction, onUpdate: NoAction, map: "penjemputan_sampah_ibfk_2")
+  sampah              sampah[]
+
+  @@index([id_dropbox], map: "id_dropbox")
+  @@index([id_user], map: "id_user")
+}
+
+model sampah {
+  id_sampah          String              @id @db.VarChar(255)
+  Nama_sampah        String?             @db.VarChar(255)
+  Berat_Sampah       Decimal?            @db.Decimal(10, 2)
+  Point              Int?
+  Created_at         DateTime?           @default(now()) @db.Timestamp(0)
+  Updated_at         DateTime?           @default(now()) @db.Timestamp(0)
+  id_jenis           String?             @db.VarChar(255)
+  id_penjemputan     String?             @db.VarChar(255)
+  jenis_sampah       jenis_sampah?       @relation(fields: [id_jenis], references: [id_jenis], onDelete: NoAction, onUpdate: NoAction, map: "sampah_ibfk_1")
+  penjemputan_sampah penjemputan_sampah? @relation(fields: [id_penjemputan], references: [id_penjemputan], onDelete: NoAction, onUpdate: NoAction, map: "sampah_ibfk_2")
+
+  @@index([id_jenis], map: "id_jenis")
+  @@index([id_penjemputan], map: "id_penjemputan")
+}
+
+model users {
+  id_user            String               @id @db.VarChar(255)
+  Nama               String?              @db.VarChar(255)
+  Email              String?              @unique(map: "Email") @db.VarChar(255)
+  Password           String               @db.VarChar(255)
+  No_Telp            String?              @db.VarChar(255)
+  Tgl_Lahir          DateTime?            @db.Date
+  Alamat             String?              @db.VarChar(255)
+  NIK                String?              @unique(map: "NIK") @db.VarChar(255)
+  No_Rek             String?              @db.VarChar(255)
+  KTP_URL            String?              @db.VarChar(255)
+  KK_URL             String?              @db.VarChar(255)
+  Foto               String?              @db.VarChar(255)
+  Total_Point        Int?
+  Berat_Sampah       Decimal?             @db.Decimal(10, 1)
+  Roles              Int?
+  Created_at         DateTime?            @default(now()) @db.Timestamp(0)
+  Updated_at         DateTime?            @default(now()) @db.Timestamp(0)
+  dropbox            dropbox[]
+  penjemputan_sampah penjemputan_sampah[]
+}
