@@ -1,17 +1,29 @@
-const jenisSampah = [
-    { id: 1, nama: "Televisi", kategori: "Peralatan Rumah Tangga" },
-    { id: 2, nama: "Kulkas", kategori: "Peralatan Rumah Tangga" },
-];
+import {prisma} from "../database.js";
 
-const totalSampah = [
-    {total: 50, jenis: "Televisi"},
-    {total: 50, jenis: "Kulkas"},
-];
-
-export const getJenisSampah = (req, res) => {
-    res.json({ data: jenisSampah });
+export const getJenisSampah = async (req, res) => {
+    try {
+        const jenisSampah = await prisma.jenis_sampah.findMany();
+        res.json({ data: jenisSampah });
+    } catch (error) {
+        res.status(500).json({ error: "Error fetching jenis sampah" });
+    }
 }
 
-export const getTotalSampah = (req, res) => {
-    res.json({ data: totalSampah });
+export const getTotalSampah = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const totalSampah = await prisma.users.findUnique({
+            where: {
+                id_user: String(id),
+            },
+            select: {
+                Berat_Sampah: true,
+            }
+        });
+        console.log(id);
+        res.json({ data: totalSampah });
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ error: "Error fetching total sampah" });
+    }
 }
