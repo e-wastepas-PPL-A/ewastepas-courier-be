@@ -1,8 +1,7 @@
-export const getDropbox = (req, res) => {
-    const dropbox = [
-        { id: 1, alamat: "Drop Box 1", jarak: "500m" },
-        { id: 2, alamat: "Drop Box 2", jarak: "1km" },
-    ];
+import {prisma} from "../database.js";
+
+export const getDropbox = async (req, res) => {
+    const dropbox = await prisma.dropbox.findMany()
 
     return res.json({ data: dropbox });
 };
