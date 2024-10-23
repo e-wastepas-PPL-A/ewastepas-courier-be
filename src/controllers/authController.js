@@ -52,7 +52,14 @@ const verifyOTP = (otp) => {
 }
 
 export const helloAuth = (req,res) => {
-    return res.status(200).json({message: 'this auth'})
+    const ktpPath = req.files['ktp'][0].path.replace(/\\/g, '/')
+    const kkPath = req.files['kk'][0].path.replace(/\\/g, '/')
+    return res.status(200).json({
+        message: 'this auth',
+        ktp_path: ktpPath,
+        kk_path : kkPath,
+        all: req.files
+    })
 }
 
 export const generateOTP = async (req,res) => {
