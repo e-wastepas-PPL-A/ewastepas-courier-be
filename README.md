@@ -1,7 +1,7 @@
 
 # Ewastepas Courier API
 
-The **Ewastepas Admin API** is a backend service designed to facilitate the management of e-waste collection, user interactions, and platform activities for courier partners. Built using **Node.js** and **ExpressJS** with **MySQL** as the database, this API provides essential functionalities to enhance the efficiency of e-waste management.
+The **Ewastepas Courier API** is a backend service designed to facilitate the management of e-waste collection, user interactions, and platform activities for courier partners. Built using **Node.js** and **ExpressJS** with **MySQL** as the database, this API provides essential functionalities to enhance the efficiency of e-waste management.
 
 
 
