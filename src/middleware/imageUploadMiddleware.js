@@ -21,18 +21,19 @@ const fileFilter = (req, file, cb) => {
     }
 }
 
-const upload = multer({storage: storage, limits: {fileSize: 3 * 1024 * 1024 }, fileFilter: fileFilter})
+export const upload = multer({storage: storage, limits: {fileSize: 3 * 1024 * 1024 }, fileFilter: fileFilter})
 
-export const uploads = (req, res) => {
-  upload.fields([{name: 'ktp', maxCount:1}, {name: 'kk', maxCount: 1}])(req, res, err => {
-    if (err instanceof multer.MulterError) {
-      if (err.code === 'LIMIT_FILE_SIZE') {
-        return res.status(400).send('File terlalu besar. Maksimal ukuran file adalah 3 MB.');
-      }
-      return res.status(400).send('Multer error occurred: ' + err.message);
-    } else if (err) {
-      return res.status(400).send('An unknown error occurred: ' + err.message);
-    }
-    res.send('File uploaded successfully');
-  })
-}
+
+// export const uploads = (req, res) => {
+//   upload.fields([{name: 'ktp', maxCount:1}, {name: 'kk', maxCount: 1}, {name: 'foto', maxCount: 1}])(req, res, err => {
+//     if (err instanceof multer.MulterError) {
+//       if (err.code === 'LIMIT_FILE_SIZE') {
+//         return res.status(400).send('File terlalu besar. Maksimal ukuran file adalah 3 MB.');
+//       }
+//       return res.status(400).send('Multer error occurred: ' + err.message);
+//     } else if (err) {
+//       return res.status(400).send('An unknown error occurred: ' + err.message);
+//     }
+//     res.send('File uploaded successfully');
+//   })
+// }
