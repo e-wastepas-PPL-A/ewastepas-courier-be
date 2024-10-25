@@ -5,6 +5,7 @@ import { google } from 'googleapis'
 import { prisma } from '../database.js'
 import { json } from 'express'
 import bcrypt from 'bcrypt'
+import jwt from 'jsonwebtoken'
 
 
 const {EMAIL,SECRET_KEYS,CLIENT_ID,CLIENT_SECRET,REDIRECT_URL,REFRESH_TOKEN} = process.env
@@ -121,5 +122,30 @@ export const verifyOTP = async (req,res) => {
 }
 
 export const login = async (req, res) => {
-    res.json({message: 'ini login'})
+    const {email, password} = req.body
+
+    const user = await prisma.users.findFirst({
+        where: { Email: email }
+    })
+
+    if(!user){
+        return res.status(400).json({error: "User not found"})
+    }
+
+    const match = await bcrypt.compare(password, user.Password);
+
+    if(match){
+        const payload = {
+            id: user.id_user,
+            email: user.Email,
+            role: user.Roles
+        }
+        const expiresIn = 60 * 60 *6
+        const token = jwt.sign(payload, SECRET_KEYS, {expiresIn: expiresIn})
+
+        return res.status(200).json({message: 'Login successful', data: payload, token: token})
+    } else {
+        return res.status(400).json({error: 'Incorrect password'})
+    }
+
 }

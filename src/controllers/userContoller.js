@@ -12,7 +12,7 @@ export const getAllUsers = async (req, res) => {
 }
 
 export const updateUserData = async (req, res) => {
-    const {id, email, nama, alamat, nik, tgl_lahir, no_telp, no_rek} = req.body
+    const { id, email, nama, alamat, nik, tgl_lahir, no_telp, no_rek } = req.body
     
     const ktpPath = req.files['ktp'][0].path.replace(/\\/g, '/')
     const kkPath = req.files['kk'][0].path.replace(/\\/g, '/')
@@ -45,5 +45,39 @@ export const updateUserData = async (req, res) => {
 }
 
 export const changePassword = async (req, res) => {
-    res.json({message: 'ini lupa password'})
+    const { email, old_password, password, password2 } = req.body
+
+    if(password !== password2){
+        return res.status(400).json({ error: 'Both passwords must be the same. Please check and re-enter.' })
+    }
+
+    const user = await prisma.users.findFirst({
+        where: {
+            Email: email
+        }
+    })
+
+    const match = await bcrypt.compare(old_password, user.Password);
+
+    const saltRounds = 10
+    const salt = bcrypt.genSaltSync(saltRounds)
+    const passwordHash = bcrypt.hashSync(password, salt)
+
+    if(match){
+        try {
+            await prisma.users.update({
+                where: {
+                    Email: email
+                },
+                data: {
+                    Password : passwordHash
+                }
+            })
+            res.status(200).json({message: 'Change password successfully.'})
+        } catch (error) {
+            console.log(error)
+        }
+    } else {
+        return res.status(500).json({message: 'Change password failed.'})
+    }
 }
