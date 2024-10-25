@@ -1,10 +1,16 @@
 import { prisma } from '../database.js'
 import bcrypt from 'bcrypt'
 
-export const getAllUsers = async (req, res) => {
+export const getUser = async (req, res) => {
+    const { id } = req.payload
+
     try {
-        const allUsers = await prisma.users.findMany();
-        res.status(200).json({allUsers})
+        const user = await prisma.users.findUnique({
+            where: {
+                id_user: id
+            }
+        });
+        res.status(200).json({user})
     } catch (error) {
         console.log(error)
         res.status(500).json({error: error})
@@ -12,7 +18,8 @@ export const getAllUsers = async (req, res) => {
 }
 
 export const updateUserData = async (req, res) => {
-    const { id, email, nama, alamat, nik, tgl_lahir, no_telp, no_rek } = req.body
+    const { nama, alamat, nik, tgl_lahir, no_telp, no_rek } = req.body
+    const { id, email } = req.payload
     
     const ktpPath = req.files['ktp'][0].path.replace(/\\/g, '/')
     const kkPath = req.files['kk'][0].path.replace(/\\/g, '/')
@@ -24,7 +31,6 @@ export const updateUserData = async (req, res) => {
                 id_user: id
             },
             data: {
-                Email: email,
                 Nama: nama,
                 Alamat: alamat,
                 NIK: nik,
@@ -45,9 +51,14 @@ export const updateUserData = async (req, res) => {
 }
 
 export const changePassword = async (req, res) => {
-    const { email, old_password, password, password2 } = req.body
+    const { old_password, new_password, confirm_new_password } = req.body
+    const { email } = req.payload
 
-    if(password !== password2){
+    if(!old_password || !new_password || !confirm_new_password) {
+        return res.status(400).json({error: 'Required fields are missing. Please complete all required fields.'})
+    }
+
+    if(new_password !== confirm_new_password){
         return res.status(400).json({ error: 'Both passwords must be the same. Please check and re-enter.' })
     }
 
@@ -61,7 +72,7 @@ export const changePassword = async (req, res) => {
 
     const saltRounds = 10
     const salt = bcrypt.genSaltSync(saltRounds)
-    const passwordHash = bcrypt.hashSync(password, salt)
+    const passwordHash = bcrypt.hashSync(new_password, salt)
 
     if(match){
         try {
@@ -78,6 +89,6 @@ export const changePassword = async (req, res) => {
             console.log(error)
         }
     } else {
-        return res.status(500).json({message: 'Change password failed.'})
+        return res.status(500).json({message: 'Old password wrong'})
     }
 }
