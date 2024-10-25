@@ -17,7 +17,7 @@ const generatorOTP = () => {
     const otp = speakeasy.totp({
         secret: SECRET_KEYS,
         encoding: 'base32',
-        step: 300
+        step: 180
     })
     return otp
 }
@@ -48,57 +48,55 @@ const sendOTPEmail = async (email,otp) => {
 
 
 export const registration = async (req, res) => {
+    const { email, password, confirm_password } = req.body
 
-    if(!req.body.email || !req.body.password || !req.body.password2){
+    if(!email || !password || !confirm_password){
         return res.status(400).json({error: 'Required fields are missing. Please complete all required fields.'})
     }
 
-    if(req.body.password !== req.body.password2){
+    if(password !== confirm_password){
         return res.status(400).json({error: 'Both passwords must be the same. Please check and re-enter.'})
     }
 
     const saltRounds = 10
     const salt = bcrypt.genSaltSync(saltRounds)
-    const passwordHash = bcrypt.hashSync(req.body.password, salt)
+    const passwordHash = bcrypt.hashSync(password, salt)
 
     try {
         const newUser = await prisma.users.create({
             data: {
-                id_user: req.body.id,
-                Email: req.body.email,
+                Email: email,
                 Password: passwordHash,
-                Roles: 1
+                Roles: 'kurir'
             }
         })
-        res.status(201).json({ message: 'Registration successful.', data: newUser})
+        const otp = generatorOTP();
+        try {
+            await sendOTPEmail(email, otp)
+            return res.status(201).json({ message: 'Registration successful.', data: newUser})
+        } catch (error) {
+            console.error(error)
+            res.status(500).json({ error: 'Failed to send OTP email.' })
+        }
     } catch (error) {
         console.error(error)
         res.status(500).json({ error: error })
     }
 
-    const otp = generatorOTP();
-
-    try {
-        await sendOTPEmail(req.body.email, otp)
-    } catch (error) {
-        console.error(error)
-        res.status(500).json({ error: 'Failed to send OTP email.' })
-    }
-
 }
 
-
 export const verifyOTP = async (req,res) => {
+    const { email, otp } = req.body
 
-    if(!req.body.otp){
+    if(!otp){
         return res.status(400).json({error: 'OTP is required.'})
     }
 
     const tokenValidates = speakeasy.totp.verify({
         secret: SECRET_KEYS,
         encoding: 'base32',
-        token: req.body.otp,
-        step: 300,
+        token: otp,
+        step: 180,
         window:1
       })
 
@@ -106,10 +104,10 @@ export const verifyOTP = async (req,res) => {
         try {
             await prisma.users.update({
                 where: {
-                    id_user: req.body.id
+                    Email: email
                 },
                 data: {
-                    Is_verified : 1
+                    is_verified: true
                 }
             })
             return res.status(200).json({message: 'User has been verified.'})
@@ -148,5 +146,31 @@ export const login = async (req, res) => {
     } else {
         return res.status(400).json({error: 'Incorrect password'})
     }
+}
 
+export const forgotPassword = async (req, res) => {
+    const { email } = req.payload
+    const { new_password, confirm_new_password } = req.body
+
+    if(!new_password || !confirm_new_password) {
+        return res.status(400).json({error: 'Required fields are missing. Please complete all required fields.'})
+    }
+
+    if(new_password !== confirm_new_password) {
+        return res.status(400).json({error: 'Both passwords must be the same. Please check and re-enter.'})
+    }
+
+    try {
+        await prisma.users.update({
+            where: {
+                Email: email
+            },
+            data: {
+                Password: new_password
+            }
+        })
+        return res.status(200).json({message: 'Change password succesfully.'})
+    } catch (error) {
+        console.log(error)
+    }
 }

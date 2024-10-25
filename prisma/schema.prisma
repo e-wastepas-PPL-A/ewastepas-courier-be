@@ -14,11 +14,11 @@ model dropbox {
   Latitude           String?              @db.VarChar(255)
   Created_at         DateTime?            @default(now()) @db.Timestamp(0)
   Updated_at         DateTime?            @default(now()) @db.Timestamp(0)
-  id_user            String?              @db.VarChar(255)
-  users              users?               @relation(fields: [id_user], references: [id_user], onDelete: NoAction, onUpdate: NoAction, map: "dropbox_ibfk_1")
+  id_user            Int
+  users              users                @relation(fields: [id_user], references: [id_user], onDelete: Cascade, map: "dropbox_ibfk_1")
   penjemputan_sampah penjemputan_sampah[]
 
-  @@index([id_user], map: "id_user")
+  @@index([id_user], map: "id_user_dropbox")
 }
 
 model jenis_sampah {
@@ -37,9 +37,9 @@ model penjemputan_sampah {
   Status_Penjemputan  String?   @db.VarChar(255)
   Status_Pengiriman   String?   @db.VarChar(255)
   Total_sampah        Int?
-  id_user             String?   @db.VarChar(255)
   id_dropbox          String?   @db.VarChar(255)
-  users               users?    @relation(fields: [id_user], references: [id_user], onDelete: NoAction, onUpdate: NoAction, map: "penjemputan_sampah_ibfk_1")
+  id_user             Int
+  users               users     @relation(fields: [id_user], references: [id_user], onDelete: Cascade, map: "penjemputan_sampah_ibfk_1")
   dropbox             dropbox?  @relation(fields: [id_dropbox], references: [id_dropbox], onDelete: NoAction, onUpdate: NoAction, map: "penjemputan_sampah_ibfk_2")
   sampah              sampah[]
 
@@ -64,9 +64,10 @@ model sampah {
 }
 
 model users {
-  id_user            String               @id @db.VarChar(255)
+  id_user            Int                  @id @default(autoincrement())
   Nama               String?              @db.VarChar(255)
   Email              String?              @unique(map: "Email") @db.VarChar(255)
+  Password           String               @db.VarChar(255)
   No_Telp            String?              @db.VarChar(255)
   Tgl_Lahir          DateTime?            @db.Date
   Alamat             String?              @db.VarChar(255)
@@ -77,18 +78,24 @@ model users {
   Foto               String?              @db.VarChar(255)
   Total_Point        Int?
   Berat_Sampah       Decimal?             @db.Decimal(10, 1)
-  Roles              Int?
+  Roles              users_Roles
+  Status             users_Status         @default(Tertunda)
+  is_verified        Boolean              @default(false)
   Created_at         DateTime?            @default(now()) @db.Timestamp(0)
   Updated_at         DateTime?            @default(now()) @db.Timestamp(0)
-  Is_verified        Int?                 @default(0) @db.TinyInt
-  Status             users_Status?        @default(pending)
-  Password           String               @db.VarChar(255)
   dropbox            dropbox[]
   penjemputan_sampah penjemputan_sampah[]
 }
 
+enum users_Roles {
+  Admin
+  Manajemen
+  kurir
+  Masyarakat
+}
+
 enum users_Status {
-  approved
-  pending
-  rejected
+  Diterima
+  Tertunda
+  Ditolak
 }

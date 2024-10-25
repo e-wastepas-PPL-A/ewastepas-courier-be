@@ -7,17 +7,18 @@
 {
   "email" : "jamjam@gmail.com",
   "password" : "12345678",
-  "password2" : "12345678"
+  "confirm_password" : "12345678"
 }
 ```
 - Response:
 ```json
 {
-   "message": "Registration successful.",
+    "message": "Registration successful.",
     "data": {
-        "id_user": 1,
+        "id_user": 10,
         "Nama": null,
         "Email": "jamjam@gmail.com",
+        "Password": "$2b$10$B.SEk1SjZX9e4tdOTcq/XuuczAjER5GNaIqnjX5Zoh74csk6vRS76",
         "No_Telp": null,
         "Tgl_Lahir": null,
         "Alamat": null,
@@ -28,12 +29,11 @@
         "Foto": null,
         "Total_Point": null,
         "Berat_Sampah": null,
-        "Roles": 1,
-        "Created_at": "2024-10-25T08:18:03.000Z",
-        "Updated_at": "2024-10-25T08:18:03.000Z",
-        "Is_verified": 0,
-        "Status": "pending",
-        "Password": "$2b$10$qWDtcKZLAlTZMzdP.hDid.CFfwmcPu1e3QpDdUuPnLZL3O1ZYhDse"
+        "Roles": "kurir",
+        "Status": "Tertunda",
+        "is_verified": false,
+        "Created_at": "2024-10-25T12:11:04.000Z",
+        "Updated_at": "2024-10-25T12:11:04.000Z"
     }
 }
 ```
@@ -43,8 +43,8 @@
 - Request Body:
 ```json
 {
-  "id" : 1,
-  "otp" : "678989",
+    "email" : "jamjam@gmail.com",
+    "otp" : "816662"
 }
 ```
 - Response:
@@ -69,22 +69,41 @@
    "message": "Login successful",
     "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6Im1hc2EgaWQgcGFrZSB0aXBlIGRhdGEgc3RyaW5nIiwiZW1haWwiOiJtcml6a2loYWlrYWwyOTRAZ21haWwuY29tIiwicm9sZSI6bnVsbCwiaWF0IjoxNzI5ODQzOTU1LCJleHAiOjE3Mjk4NjU1NTV9.Mvdpfi01-k2u6gvJp0LsB1VeG2HjoUn-VMIhpDV43Ow",
     "user": {
-        "id": "masa id pake tipe data string",
+        "id": 1,
         "email": "asukayang@gmail.com",
-        "role": 1
+        "role": "kurir"
     }
+}
+```
+## Endpoint: Data user login
+- GET: `/api/user`
+- Request Headers:
+```json
+{
+  "authorization" : "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6Im1hc2EgaWQgcGFrZSB0aXBlIGRhdGEgc3RyaW5nIiwiZW1haWwiOiJtcml6a2loYWlrYWwyOTRAZ21haWwuY29tIiwicm9sZSI6bnVsbCwiaWF0IjoxNzI5ODQzOTU1LCJleHAiOjE3Mjk4NjU1NTV9.Mvdpfi01-k2u6gvJp0LsB1VeG2HjoUn-VMIhpDV43Ow"
+}
+```
+- Response:
+```json
+{
+  "message": "Change password successfully."
 }
 ```
 
 ## Endpoint: Ubah kata sandi
 - POST: `/api/user/change_password`
+- Request Headers:
+```json
+{
+  "authorization" : "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6Im1hc2EgaWQgcGFrZSB0aXBlIGRhdGEgc3RyaW5nIiwiZW1haWwiOiJtcml6a2loYWlrYWwyOTRAZ21haWwuY29tIiwicm9sZSI6bnVsbCwiaWF0IjoxNzI5ODQzOTU1LCJleHAiOjE3Mjk4NjU1NTV9.Mvdpfi01-k2u6gvJp0LsB1VeG2HjoUn-VMIhpDV43Ow"
+}
+```
 - Request Body:
 ```json
 {
-  "email" : "jamjam@gmail.com",
-  "old_password" : "12345678",
-  "password" : "12345678",
-   "password2" : "12345678"
+    "old_password" : "87654321",
+    "new_password" : "12345678",
+    "confirm_new_password" : "12345678"
 }
 ```
 - Response:
