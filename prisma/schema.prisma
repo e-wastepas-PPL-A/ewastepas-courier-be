@@ -67,7 +67,6 @@ model users {
   id_user            String               @id @db.VarChar(255)
   Nama               String?              @db.VarChar(255)
   Email              String?              @unique(map: "Email") @db.VarChar(255)
-  Password           String               @db.VarChar(255)
   No_Telp            String?              @db.VarChar(255)
   Tgl_Lahir          DateTime?            @db.Date
   Alamat             String?              @db.VarChar(255)
@@ -81,6 +80,15 @@ model users {
   Roles              Int?
   Created_at         DateTime?            @default(now()) @db.Timestamp(0)
   Updated_at         DateTime?            @default(now()) @db.Timestamp(0)
+  Is_verified        Int?                 @default(0) @db.TinyInt
+  Status             users_Status?        @default(pending)
+  Password           String               @db.VarChar(255)
   dropbox            dropbox[]
   penjemputan_sampah penjemputan_sampah[]
+}
+
+enum users_Status {
+  approved
+  pending
+  rejected
 }

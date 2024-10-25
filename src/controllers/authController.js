@@ -1,7 +1,12 @@
 import 'dotenv/config'
 import speakeasy from 'speakeasy'
 import nodemailer from 'nodemailer'
-import {google} from 'googleapis'
+import { google } from 'googleapis'
+import { prisma } from '../database.js'
+import { json } from 'express'
+import bcrypt from 'bcrypt'
+import jwt from 'jsonwebtoken'
+
 
 const {EMAIL,SECRET_KEYS,CLIENT_ID,CLIENT_SECRET,REDIRECT_URL,REFRESH_TOKEN} = process.env
 
@@ -12,7 +17,7 @@ const generatorOTP = () => {
     const otp = speakeasy.totp({
         secret: SECRET_KEYS,
         encoding: 'base32',
-        // step: 120
+        step: 300
     })
     return otp
 }
@@ -41,55 +46,106 @@ const sendOTPEmail = async (email,otp) => {
     console.log('Message sent: %s', info.messageId)
 }
 
-const verifyOTP = (otp) => {
-    var tokenValidates = speakeasy.totp.verify({
-        secret: SECRET_KEYS,
-        encoding: 'base32',
-        token: otp,
-        window:1
-      })
-    return tokenValidates
-}
 
-export const helloAuth = (req,res) => {
-    const ktpPath = req.files['ktp'][0].path.replace(/\\/g, '/')
-    const kkPath = req.files['kk'][0].path.replace(/\\/g, '/')
-    return res.status(200).json({
-        message: 'this auth',
-        ktp_path: ktpPath,
-        kk_path : kkPath,
-        all: req.files
-    })
-}
+export const registration = async (req, res) => {
 
-export const generateOTP = async (req,res) => {
-    const { email } = req.body
-    if (!email) {
-        return res.status(400).json({ error: 'Email is required' })
+    if(!req.body.email || !req.body.password || !req.body.password2){
+        return res.status(400).json({error: 'Required fields are missing. Please complete all required fields.'})
+    }
+
+    if(req.body.password !== req.body.password2){
+        return res.status(400).json({error: 'Both passwords must be the same. Please check and re-enter.'})
+    }
+
+    const saltRounds = 10
+    const salt = bcrypt.genSaltSync(saltRounds)
+    const passwordHash = bcrypt.hashSync(req.body.password, salt)
+
+    try {
+        const newUser = await prisma.users.create({
+            data: {
+                id_user: req.body.id,
+                Email: req.body.email,
+                Password: passwordHash
+            }
+        })
+        res.status(200).json({ message: 'Registration successful.', data: newUser})
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ error: error })
     }
 
     const otp = generatorOTP();
+
     try {
-        await sendOTPEmail(email, otp)
-        res.json({ message: 'OTP sent to your email' })
+        await sendOTPEmail(req.body.email, otp)
     } catch (error) {
         console.error(error)
-        res.status(500).json({ error: 'Failed to send OTP email' })
+        res.status(500).json({ error: 'Failed to send OTP email.' })
     }
+
 }
 
-export const verify = (req,res) => {
-    const {otp} = req.body;
-    if(!otp){
-        return res.status(400).json({error: 'OTP is required'})
+
+export const verifyOTP = async (req,res) => {
+
+    if(!req.body.otp){
+        return res.status(400).json({error: 'OTP is required.'})
     }
 
-    var checkOTP = verifyOTP(otp)
+    const tokenValidates = speakeasy.totp.verify({
+        secret: SECRET_KEYS,
+        encoding: 'base32',
+        token: req.body.otp,
+        step: 300,
+        window:1
+      })
 
-    // if(!checkOTP){
-    //     return res.status(400).json({message: 'Invalid OTP'})
-    // }
+    if(tokenValidates){
+        try {
+            await prisma.users.update({
+                where: {
+                    id_user: req.body.id
+                },
+                data: {
+                    Is_verified : 1
+                }
+            })
+            return res.status(200).json({message: 'User has been verified.'})
+        } catch (error) {
+            console.error(error)
+        }
+    } else {
+        return res.status(400).json({error: 'Invalid OTP'})
+    }
     
-    return res.status(200).json({message: checkOTP})
 }
 
+export const login = async (req, res) => {
+    const {email, password} = req.body
+
+    const user = await prisma.users.findFirst({
+        where: { Email: email }
+    })
+
+    if(!user){
+        return res.status(400).json({error: "User not found"})
+    }
+
+    const match = await bcrypt.compare(password, user.Password);
+
+    if(match){
+        const payload = {
+            id: user.id_user,
+            email: user.Email,
+            role: user.Roles
+        }
+        const expiresIn = 60 * 60 *6
+        const token = jwt.sign(payload, SECRET_KEYS, {expiresIn: expiresIn})
+
+        return res.status(200).json({message: 'Login successful', data: payload, token: token})
+    } else {
+        return res.status(400).json({error: 'Incorrect password'})
+    }
+
+}
