@@ -50,7 +50,7 @@ Start the server
 ## Authors
 
 - [@lanangksma](https://github.com/lanangksma)
--
+- [@mrizqh294](https://github.com/mrizqh294)
 
 
 ## Documentation

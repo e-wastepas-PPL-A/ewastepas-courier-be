@@ -66,10 +66,11 @@ export const registration = async (req, res) => {
             data: {
                 id_user: req.body.id,
                 Email: req.body.email,
-                Password: passwordHash
+                Password: passwordHash,
+                Roles: 1
             }
         })
-        res.status(200).json({ message: 'Registration successful.', data: newUser})
+        res.status(201).json({ message: 'Registration successful.', data: newUser})
     } catch (error) {
         console.error(error)
         res.status(500).json({ error: error })
@@ -143,7 +144,7 @@ export const login = async (req, res) => {
         const expiresIn = 60 * 60 *6
         const token = jwt.sign(payload, SECRET_KEYS, {expiresIn: expiresIn})
 
-        return res.status(200).json({message: 'Login successful', data: payload, token: token})
+        return res.status(200).json({message: 'Login successful', token: token, user: payload})
     } else {
         return res.status(400).json({error: 'Incorrect password'})
     }
