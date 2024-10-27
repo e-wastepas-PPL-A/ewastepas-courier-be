@@ -8,7 +8,7 @@ import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
 
 
-const {EMAIL,SECRET_KEYS,CLIENT_ID,CLIENT_SECRET,REDIRECT_URL,REFRESH_TOKEN} = process.env
+const {EMAIL,SECRET_KEYS,CLIENT_ID,CLIENT_SECRET,REDIRECT_URL,REFRESH_TOKEN,FORGOT_PASSWORD_SECRET} = process.env
 
 const oAuth2Client = new google.auth.OAuth2(CLIENT_ID,CLIENT_SECRET,REDIRECT_URL)
 oAuth2Client.setCredentials({refresh_token:REFRESH_TOKEN})
@@ -22,9 +22,23 @@ const generatorOTP = () => {
     return otp
 }
 
-const sendOTPEmail = async (email,otp) => {
+const generateJWT = (payload, expiresIn) => {
+    const token = jwt.sign(payload, SECRET_KEYS, {expiresIn: expiresIn})
+    return token
+}
+
+const generatePassword = (password) => {
+    const saltRounds = 10
+    const salt = bcrypt.genSaltSync(saltRounds)
+    const passwordHash = bcrypt.hashSync(password, salt)
+    return passwordHash
+}
+
+export const sendOTPEmail = async (email) => {
     const accessToken = await oAuth2Client.getAccessToken()
-    let transporter = nodemailer.createTransport({
+    const otp = generatorOTP()
+
+    const transporter = nodemailer.createTransport({
         service: 'gmail',  
         auth: {
             type: 'OAuth2',
@@ -36,7 +50,7 @@ const sendOTPEmail = async (email,otp) => {
         }
     })
 
-    let info = await transporter.sendMail({
+    const info = await transporter.sendMail({
         from: `"OTP Service E-Wastepas" ${EMAIL}`,
         to: email,
         subject: 'Your OTP Verification Code',
@@ -58,9 +72,7 @@ export const registration = async (req, res) => {
         return res.status(400).json({error: 'Both passwords must be the same. Please check and re-enter.'})
     }
 
-    const saltRounds = 10
-    const salt = bcrypt.genSaltSync(saltRounds)
-    const passwordHash = bcrypt.hashSync(password, salt)
+    const passwordHash = generatePassword(password)
 
     try {
         const newUser = await prisma.users.create({
@@ -70,9 +82,8 @@ export const registration = async (req, res) => {
                 Roles: 'kurir'
             }
         })
-        const otp = generatorOTP();
         try {
-            await sendOTPEmail(email, otp)
+            await sendOTPEmail(email)
             return res.status(201).json({ message: 'Registration successful.', data: newUser})
         } catch (error) {
             console.error(error)
@@ -85,8 +96,8 @@ export const registration = async (req, res) => {
 
 }
 
-export const verifyOTP = async (req,res) => {
-    const {email, otp} = req.body
+export const verifyOTP = async (req,res) => { 
+    const {email, otp, type} = req.body
 
     if(!otp){
         return res.status(400).json({error: 'OTP is required.'})
@@ -98,9 +109,13 @@ export const verifyOTP = async (req,res) => {
         token: otp,
         step: 180,
         window:1
-      })
+    })
 
-    if(tokenValidates){
+    if(!tokenValidates){
+        return res.status(400).json({error: 'Invalid OTP'})
+    }
+    
+    if(type === 'registration'){
         try {
             await prisma.users.update({
                 where: {
@@ -114,21 +129,52 @@ export const verifyOTP = async (req,res) => {
         } catch (error) {
             console.error(error)
         }
+    } else if (type === 'forgot_password') {
+        const expiresIn = 10 * 60
+        const payload = {email: email}
+        const token = generateJWT(payload, expiresIn)
+        return res.status(200).json({token: token})
     } else {
-        return res.status(400).json({error: 'Invalid OTP'})
+        return res.status(400).json({error: 'Invalid type'})
     }
+
+
+    // if(tokenValidates){
+    //     try {
+    //         await prisma.users.update({
+    //             where: {
+    //                 Email: email
+    //             },
+    //             data: {
+    //                 is_verified: true
+    //             }
+    //         })
+    //         return res.status(200).json({message: 'User has been verified.'})
+    //     } catch (error) {
+    //         console.error(error)
+    //     }
+    // } else {
+    //     return res.status(400).json({error: 'Invalid OTP'})
+    // }
     
 }
 
 export const login = async (req, res) => {
     const {email, password} = req.body
 
-    const user = await prisma.users.findFirst({
+    const user = await prisma.users.findUnique({
         where: { Email: email }
     })
 
     if(!user){
         return res.status(400).json({error: "User not found"})
+    }
+
+    if(!user.is_verified){
+        return res.status(403).json({
+            error: "Your account has not been verified",
+            email: email
+        })
     }
 
     const match = await bcrypt.compare(password, user.Password);
@@ -140,8 +186,7 @@ export const login = async (req, res) => {
             role: user.Roles
         }
         const expiresIn = 60 * 60 *6
-        const token = jwt.sign(payload, SECRET_KEYS, {expiresIn: expiresIn})
-        
+        const token = generateJWT(payload, expiresIn)
         return res.status(200).json({message: 'Login successful', token: token, user: payload})
     } else {
         return res.status(400).json({error: 'Incorrect password'})
@@ -160,17 +205,31 @@ export const forgotPassword = async (req, res) => {
         return res.status(400).json({error: 'Both passwords must be the same. Please check and re-enter.'})
     }
 
+    const passwordHash = generatePassword(new_password)
+
     try {
         await prisma.users.update({
             where: {
                 Email: email
             },
             data: {
-                Password: new_password
+                Password: passwordHash
             }
         })
         return res.status(200).json({message: 'Change password succesfully.'})
     } catch (error) {
         console.log(error)
+    }
+}
+
+export const sendOTP = async (req, res) => {
+    const {email} = req.body
+
+    try {
+        await sendOTPEmail(email)
+        return res.status(200).json({ message: 'OTP send to your email'})
+    } catch (error) {
+        console.error(error)
+        return res.status(500).json({ error: 'Failed to send OTP email.' })
     }
 }
