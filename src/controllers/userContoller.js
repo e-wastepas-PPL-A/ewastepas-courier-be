@@ -2,7 +2,7 @@ import { prisma } from '../database.js'
 import bcrypt from 'bcrypt'
 
 export const getUser = async (req, res) => {
-    const { id } = req.payload
+    const {id} = req.payload
 
     try {
         const user = await prisma.users.findUnique({
@@ -19,10 +19,10 @@ export const getUser = async (req, res) => {
 
 export const updateUserData = async (req, res) => {
     const {nama, alamat, nik, tgl_lahir, no_telp, no_rek} = req.body
-    const {id, email} = req.payload
-    const ktp = req.files['ktp'][0].path.replace(/\\/g, '/')
-    const kk = req.files['kk'][0].path.replace(/\\/g, '/')
-    const foto = req.files['foto'][0].path.replace(/\\/g, '/')
+    const {id} = req.payload
+    const fotoPath = req.files?.foto ? req.files.foto[0].path.replace(/\\/g, '/') : null;
+    const ktpPath = req.files?.ktp ? req.files.ktp[0].path.replace(/\\/g, '/') : null;
+    const kkPath = req.files?.kk ? req.files.kk[0].path.replace(/\\/g, '/') : null;
 
     try {
         const updatedUser = await prisma.users.updateMany({
@@ -36,9 +36,9 @@ export const updateUserData = async (req, res) => {
                 Tgl_Lahir: tgl_lahir,
                 No_Telp: no_telp,
                 No_Rek: no_rek,
-                Foto: foto,
-                KTP_URL: ktp,
-                KK_URL: kk
+                Foto: fotoPath,
+                KTP_URL: ktpPath,
+                KK_URL: kkPath
             }
         })
         res.status(200).json({message: 'Data successfully updated', data: updatedUser})  
