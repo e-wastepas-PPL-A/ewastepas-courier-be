@@ -37,20 +37,71 @@
     }
 }
 ```
+## Endpoint: Kirim OTP/Kirim ulang OTP
+- POST: `/api/auth/send-otp`
+- Request Body:
+```json
+{
+  "email" : "jamjam@gmail.com"
+}
+```
+- Response:
+```json
+{
+    "message": "OTP send to your email"
+}
+```
 
 ## Endpoint: Verifikasi OTP
 - POST: `/api/auth/verify-otp`
 - Request Body:
-```json
+```json (registration)
 {
     "email" : "jamjam@gmail.com",
-    "otp" : "816662"
+    "otp" : "816662",
+    "type" : "registration"
 }
 ```
 - Response:
 ```json
 {
   "message": "User has been verified."
+}
+```
+- Request Body:
+```json (forgot_password)
+{
+    "email" : "jamjam@gmail.com",
+    "otp" : "816662",
+    "type" : "forgot_password"
+}
+```
+- Response:
+```json
+{
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6Im1yaXpraWhhaWthbDI5NEBnbWFpbC5jb20iLCJpYXQiOjE3MzAwNTE1NjIsImV4cCI6MTczMDA1MjE2Mn0.Ba8-DWYWyVZsQRqwSHFZaQvxYDpVEdUs5lCBeB_SeEk"
+}
+```
+
+## Endpoint: Lupa kata sandi
+- PATCH: `/api/auth/forgot-password`
+- Request Headers:
+```json
+{
+  "Authorization" : "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6Im1yaXpraWhhaWthbDI5NEBnbWFpbC5jb20iLCJpYXQiOjE3MzAwNTE1NjIsImV4cCI6MTczMDA1MjE2Mn0.Ba8-DWYWyVZsQRqwSHFZaQvxYDpVEdUs5lCBeB_SeEk"
+}
+```
+- Request Body:
+```json
+{
+    "new_password": "12345678",
+    "confirm_new_password" : "12345678"
+}
+```
+- Response:
+```json
+{
+    "message": "Change password succesfully."
 }
 ```
 
