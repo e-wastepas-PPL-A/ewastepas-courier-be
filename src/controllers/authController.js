@@ -86,7 +86,7 @@ export const registration = async (req, res) => {
 }
 
 export const verifyOTP = async (req,res) => {
-    const { email, otp } = req.body
+    const {email, otp} = req.body
 
     if(!otp){
         return res.status(400).json({error: 'OTP is required.'})
@@ -141,7 +141,7 @@ export const login = async (req, res) => {
         }
         const expiresIn = 60 * 60 *6
         const token = jwt.sign(payload, SECRET_KEYS, {expiresIn: expiresIn})
-
+        
         return res.status(200).json({message: 'Login successful', token: token, user: payload})
     } else {
         return res.status(400).json({error: 'Incorrect password'})
@@ -149,8 +149,8 @@ export const login = async (req, res) => {
 }
 
 export const forgotPassword = async (req, res) => {
-    const { email } = req.payload
-    const { new_password, confirm_new_password } = req.body
+    const {email} = req.payload
+    const {new_password, confirm_new_password} = req.body
 
     if(!new_password || !confirm_new_password) {
         return res.status(400).json({error: 'Required fields are missing. Please complete all required fields.'})

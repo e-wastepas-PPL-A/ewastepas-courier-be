@@ -18,12 +18,11 @@ export const getUser = async (req, res) => {
 }
 
 export const updateUserData = async (req, res) => {
-    const { nama, alamat, nik, tgl_lahir, no_telp, no_rek } = req.body
-    const { id, email } = req.payload
-    
-    const ktpPath = req.files['ktp'][0].path.replace(/\\/g, '/')
-    const kkPath = req.files['kk'][0].path.replace(/\\/g, '/')
-    const fotoPath = req.files['foto'][0].path.replace(/\\/g, '/')
+    const {nama, alamat, nik, tgl_lahir, no_telp, no_rek} = req.body
+    const {id, email} = req.payload
+    const ktp = req.files['ktp'][0].path.replace(/\\/g, '/')
+    const kk = req.files['kk'][0].path.replace(/\\/g, '/')
+    const foto = req.files['foto'][0].path.replace(/\\/g, '/')
 
     try {
         const updatedUser = await prisma.users.updateMany({
@@ -37,9 +36,9 @@ export const updateUserData = async (req, res) => {
                 Tgl_Lahir: tgl_lahir,
                 No_Telp: no_telp,
                 No_Rek: no_rek,
-                Foto: fotoPath,
-                KTP_URL: ktpPath,
-                KK_URL: kkPath
+                Foto: foto,
+                KTP_URL: ktp,
+                KK_URL: kk
             }
         })
         res.status(200).json({message: 'Data successfully updated', data: updatedUser})  
@@ -51,8 +50,8 @@ export const updateUserData = async (req, res) => {
 }
 
 export const changePassword = async (req, res) => {
-    const { old_password, new_password, confirm_new_password } = req.body
-    const { email } = req.payload
+    const {old_password, new_password, confirm_new_password} = req.body
+    const {email} = req.payload
 
     if(!old_password || !new_password || !confirm_new_password) {
         return res.status(400).json({error: 'Required fields are missing. Please complete all required fields.'})

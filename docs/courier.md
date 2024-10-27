@@ -39,7 +39,7 @@
 ```
 
 ## Endpoint: Verifikasi OTP
-- POST: `/api/auth/verify_otp`
+- POST: `/api/auth/verify-otp`
 - Request Body:
 ```json
 {
@@ -76,7 +76,7 @@
 }
 ```
 ## Endpoint: Data user login
-- GET: `/api/user`
+- GET: `/api/users`
 - Request Headers:
 ```json
 {
@@ -86,12 +86,32 @@
 - Response:
 ```json
 {
-  "message": "Change password successfully."
+    "user": {
+        "id_user": 10,
+        "Nama": "Rizki",
+        "Email": "mrizhs294@gmail.com",
+        "Password": "$2b$10$lAuYW99ZfLfoTfAUcN6Rc.FW9HkcQ7WIc6ZvNCp7qxNyx027Qj5He",
+        "No_Telp": "08345678",
+        "Tgl_Lahir": "2024-10-24T00:00:00.000Z",
+        "Alamat": "Bandung",
+        "NIK": "1234578",
+        "No_Rek": "0987654321",
+        "KTP_URL": "uploads/images/1729860931607-160855621.png",
+        "KK_URL": "uploads/images/1729860931611-319170024.png",
+        "Foto": "uploads/images/1729860931605-310423796.png",
+        "Total_Point": null,
+        "Berat_Sampah": null,
+        "Roles": "kurir",
+        "Status": "Tertunda",
+        "is_verified": true,
+        "Created_at": "2024-10-25T12:11:04.000Z",
+        "Updated_at": "2024-10-25T19:55:31.000Z"
+    }
 }
 ```
 
 ## Endpoint: Ubah kata sandi
-- POST: `/api/user/change_password`
+- PATCH: `/api/users/change-password`
 - Request Headers:
 ```json
 {

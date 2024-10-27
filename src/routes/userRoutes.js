@@ -5,8 +5,8 @@ import { JWTValidation } from '../middleware/JWTValidation.js'
 
 const router = express.Router()
 
-router.get('/user', JWTValidation, getUser)
-router.patch('/user',JWTValidation, upload.fields([{name: 'ktp', maxCount:1}, {name: 'kk', maxCount: 1}, {name: 'foto', maxCount: 1}]), updateUserData)
-router.patch('/user/change_password',JWTValidation, changePassword)
+router.get('/users', JWTValidation, getUser)
+router.patch('/users',JWTValidation, upload.fields([{name: 'ktp', maxCount:1}, {name: 'kk', maxCount: 1}, {name: 'foto', maxCount: 1}]), updateUserData)
+router.patch('/users/change-password',JWTValidation, changePassword)
 
 export default router
