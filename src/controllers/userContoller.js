@@ -2,7 +2,7 @@ import { prisma } from '../database.js'
 import bcrypt from 'bcrypt'
 
 export const getUser = async (req, res) => {
-    const { id } = req.payload
+    const {id} = req.payload
 
     try {
         const user = await prisma.users.findUnique({
@@ -18,12 +18,11 @@ export const getUser = async (req, res) => {
 }
 
 export const updateUserData = async (req, res) => {
-    const { nama, alamat, nik, tgl_lahir, no_telp, no_rek } = req.body
-    const { id, email } = req.payload
-    
-    const ktpPath = req.files['ktp'][0].path.replace(/\\/g, '/')
-    const kkPath = req.files['kk'][0].path.replace(/\\/g, '/')
-    const fotoPath = req.files['foto'][0].path.replace(/\\/g, '/')
+    const {nama, alamat, nik, tgl_lahir, no_telp, no_rek} = req.body
+    const {id} = req.payload
+    const fotoPath = req.files?.foto ? req.files.foto[0].path.replace(/\\/g, '/') : null;
+    const ktpPath = req.files?.ktp ? req.files.ktp[0].path.replace(/\\/g, '/') : null;
+    const kkPath = req.files?.kk ? req.files.kk[0].path.replace(/\\/g, '/') : null;
 
     try {
         const updatedUser = await prisma.users.updateMany({
@@ -51,8 +50,8 @@ export const updateUserData = async (req, res) => {
 }
 
 export const changePassword = async (req, res) => {
-    const { old_password, new_password, confirm_new_password } = req.body
-    const { email } = req.payload
+    const {old_password, new_password, confirm_new_password} = req.body
+    const {email} = req.payload
 
     if(!old_password || !new_password || !confirm_new_password) {
         return res.status(400).json({error: 'Required fields are missing. Please complete all required fields.'})
