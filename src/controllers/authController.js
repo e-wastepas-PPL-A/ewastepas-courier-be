@@ -8,7 +8,7 @@ import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
 
 
-const {EMAIL,SECRET_KEYS,CLIENT_ID,CLIENT_SECRET,REDIRECT_URL,REFRESH_TOKEN,FORGOT_PASSWORD_SECRET} = process.env
+const {EMAIL,SECRET_KEYS,CLIENT_ID,CLIENT_SECRET,REDIRECT_URL,REFRESH_TOKEN} = process.env
 
 const oAuth2Client = new google.auth.OAuth2(CLIENT_ID,CLIENT_SECRET,REDIRECT_URL)
 oAuth2Client.setCredentials({refresh_token:REFRESH_TOKEN})
@@ -82,16 +82,13 @@ export const registration = async (req, res) => {
                 Roles: 'kurir'
             }
         })
-        try {
-            await sendOTPEmail(email)
-            return res.status(201).json({ message: 'Registration successful.', data: newUser})
-        } catch (error) {
-            console.error(error)
-            res.status(500).json({ error: 'Failed to send OTP email.' })
-        }
+        
+        await sendOTPEmail(email)
+
+        return res.status(201).json({ message: 'Registration successful.', data: newUser})
     } catch (error) {
         console.error(error)
-        res.status(500).json({ error: error })
+        return res.status(500).json({ error: 'An error occurred during login'})
     }
 
 }
@@ -130,66 +127,53 @@ export const verifyOTP = async (req,res) => {
             console.error(error)
         }
     } else if (type === 'forgot_password') {
-        const expiresIn = 10 * 60
+        const expiresIn = 5 * 60
         const payload = {email: email}
         const token = generateJWT(payload, expiresIn)
+
         return res.status(200).json({token: token})
     } else {
         return res.status(400).json({error: 'Invalid type'})
     }
-
-
-    // if(tokenValidates){
-    //     try {
-    //         await prisma.users.update({
-    //             where: {
-    //                 Email: email
-    //             },
-    //             data: {
-    //                 is_verified: true
-    //             }
-    //         })
-    //         return res.status(200).json({message: 'User has been verified.'})
-    //     } catch (error) {
-    //         console.error(error)
-    //     }
-    // } else {
-    //     return res.status(400).json({error: 'Invalid OTP'})
-    // }
     
 }
 
 export const login = async (req, res) => {
     const {email, password} = req.body
 
-    const user = await prisma.users.findUnique({
-        where: { Email: email }
-    })
-
-    if(!user){
-        return res.status(400).json({error: "User not found"})
-    }
-
-    if(!user.is_verified){
-        return res.status(403).json({
-            error: "Your account has not been verified",
-            email: email
+    try {
+        const user = await prisma.users.findUnique({
+            where: { Email: email }
         })
-    }
-
-    const match = await bcrypt.compare(password, user.Password);
-
-    if(match){
-        const payload = {
-            id: user.id_user,
-            email: user.Email,
-            role: user.Roles
+    
+        if(!user){
+            return res.status(404).json({error: "User not found"})
         }
-        const expiresIn = 60 * 60 *6
-        const token = generateJWT(payload, expiresIn)
-        return res.status(200).json({message: 'Login successful', token: token, user: payload})
-    } else {
-        return res.status(400).json({error: 'Incorrect password'})
+    
+        if(!user.is_verified){
+            return res.status(403).json({
+                error: "Your account has not been verified",
+                email: email
+            })
+        }
+    
+        const match = await bcrypt.compare(password, user.Password);
+    
+        if(match){
+            const payload = {
+                id: user.id_user,
+                email: user.Email,
+                role: user.Roles
+            }
+            const expiresIn = 60 * 60 *6
+            const token = generateJWT(payload, expiresIn)
+            return res.status(200).json({message: 'Login successful', token: token, user: payload})
+        } else {
+            return res.status(400).json({error: 'Incorrect password'})
+        } 
+    } catch (error) {
+        console.log(error)
+        return res.status(500).json({error: 'An error occurred during login'})
     }
 }
 
@@ -216,9 +200,11 @@ export const forgotPassword = async (req, res) => {
                 Password: passwordHash
             }
         })
+
         return res.status(200).json({message: 'Change password succesfully.'})
     } catch (error) {
         console.log(error)
+        return res.status(500).json({error: 'Change password failed.'})
     }
 }
 
@@ -226,10 +212,19 @@ export const sendOTP = async (req, res) => {
     const {email} = req.body
 
     try {
+        const user = await prisma.users.findUnique({
+            where: {Email: email}
+        })
+
+        if(!user){
+            return res.status(404).json({ error: 'User not found'})
+        }
+
         await sendOTPEmail(email)
+        
         return res.status(200).json({ message: 'OTP send to your email'})
-    } catch (error) {
+    } catch(error){
         console.error(error)
-        return res.status(500).json({ error: 'Failed to send OTP email.' })
+        return res.status(500).json({error: 'Failed send OTP email'})
     }
 }
