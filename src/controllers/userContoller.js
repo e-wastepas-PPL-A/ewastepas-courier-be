@@ -18,29 +18,35 @@ export const getUser = async (req, res) => {
 }
 
 export const updateUserData = async (req, res) => {
-    const {nama, alamat, nik, tgl_lahir, no_telp, no_rek} = req.body
-    const {id} = req.payload
+    const {name, address, nik, date_of_birth, phone_number, account_number} = req.body
+    const id_payload = req.payload.id
+    const id_params = parseInt(req.params.id, 10)
     const fotoPath = req.files?.foto ? req.files.foto[0].path.replace(/\\/g, '/') : null;
     const ktpPath = req.files?.ktp ? req.files.ktp[0].path.replace(/\\/g, '/') : null;
     const kkPath = req.files?.kk ? req.files.kk[0].path.replace(/\\/g, '/') : null;
 
+    if ( id_params !== id_payload) {
+        return res.status(403).json({error: "Forbidden Access"})
+    }
+
     try {
         const updatedUser = await prisma.users.updateMany({
             where: {
-                id_user: id
+                id_user: id_payload
             },
             data: {
-                Nama: nama,
-                Alamat: alamat,
+                Nama: name,
+                Alamat: address,
                 NIK: nik,
-                Tgl_Lahir: tgl_lahir,
-                No_Telp: no_telp,
-                No_Rek: no_rek,
+                Tgl_Lahir: date_of_birth,
+                No_Telp: phone_number,
+                No_Rek: account_number,
                 Foto: fotoPath,
                 KTP_URL: ktpPath,
                 KK_URL: kkPath
             }
         })
+        console.log(id_params, id_payload)
         res.status(200).json({message: 'Data successfully updated', data: updatedUser})  
     } catch (error) {
         console.log(error);

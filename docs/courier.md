@@ -161,6 +161,38 @@
 }
 ```
 
+## Endpoint: Lengkapi data user
+- PATCH: `/api/users/:id`
+- Request Headers:
+```json
+{
+  "authorization" : "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6Im1hc2EgaWQgcGFrZSB0aXBlIGRhdGEgc3RyaW5nIiwiZW1haWwiOiJtcml6a2loYWlrYWwyOTRAZ21haWwuY29tIiwicm9sZSI6bnVsbCwiaWF0IjoxNzI5ODQzOTU1LCJleHAiOjE3Mjk4NjU1NTV9.Mvdpfi01-k2u6gvJp0LsB1VeG2HjoUn-VMIhpDV43Ow"
+}
+```
+- Request Body:
+
+| Field          | Type           | Description                               |
+|----------------|----------------|-------------------------------------------|
+| `name`         | `string`       | Nama lengkap pengguna                     |
+| `address`      | `string`       | Alamat lengkap pengguna                   |
+| `nik`          | `string`       | Nomor Induk Kependudukan (NIK)           |
+| `date_of_birth`| `string`       | Tanggal lahir dalam format `YYYY-MM-DD`   |
+| `phone_number` | `string`       | Nomor telepon pengguna                    |
+| `account_number`| `string`      | Nomor rekening pengguna                   |
+| `profile_picture` | `file`      | Foto profil pengguna dalam format gambar  |
+| `ktp`          | `file`         | Foto atau scan KTP dalam format gambar    |
+| `kk`           | `file`         | Foto atau scan Kartu Keluarga (KK)        |
+
+- Response:
+```json
+{
+    "message": "Data successfully updated",
+    "data": {
+        "count": 1
+    }
+}
+```
+
 ## Endpoint: Ubah kata sandi
 - PATCH: `/api/users/change-password`
 - Request Headers:
