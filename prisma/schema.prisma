@@ -8,94 +8,95 @@ datasource db {
 }
 
 model dropbox {
-  id_dropbox         String               @id @db.VarChar(255)
-  Alamat             String?              @db.VarChar(255)
-  Longtitude         String?              @db.VarChar(255)
-  Latitude           String?              @db.VarChar(255)
-  Created_at         DateTime?            @default(now()) @db.Timestamp(0)
-  Updated_at         DateTime?            @default(now()) @db.Timestamp(0)
-  id_user            Int
-  users              users                @relation(fields: [id_user], references: [id_user], onDelete: Cascade, map: "dropbox_ibfk_1")
-  penjemputan_sampah penjemputan_sampah[]
+  dropbox_id   String         @id @db.VarChar(255)
+  address      String?        @db.VarChar(255)
+  longtitude   String?        @db.VarChar(255)
+  latitude     String?        @db.VarChar(255)
+  created_at   DateTime?      @default(now()) @db.Timestamp(0)
+  updated_at   DateTime?      @default(now()) @db.Timestamp(0)
+  user_id      Int
+  users        users          @relation(fields: [user_id], references: [user_id], onDelete: Cascade, map: "id_user_dropbox")
+  pickup_waste pickup_waste[]
 
-  @@index([id_user], map: "id_user_dropbox")
-}
-
-model jenis_sampah {
-  id_jenis         String    @id @db.VarChar(255)
-  Nama_JenisSampah String?   @db.VarChar(255)
-  Created_at       DateTime? @default(now()) @db.Timestamp(0)
-  Updated_at       DateTime? @default(now()) @db.Timestamp(0)
-  sampah           sampah[]
-}
-
-model penjemputan_sampah {
-  id_penjemputan      String    @id @db.VarChar(255)
-  Jumlah_sampah       Int?
-  Tanggal_Penjemputan DateTime? @db.Date
-  Alamat_Penjemputan  String?   @db.VarChar(255)
-  Status_Penjemputan  String?   @db.VarChar(255)
-  Status_Pengiriman   String?   @db.VarChar(255)
-  Total_sampah        Int?
-  id_dropbox          String?   @db.VarChar(255)
-  id_user             Int
-  users               users     @relation(fields: [id_user], references: [id_user], onDelete: Cascade, map: "penjemputan_sampah_ibfk_1")
-  dropbox             dropbox?  @relation(fields: [id_dropbox], references: [id_dropbox], onDelete: NoAction, onUpdate: NoAction, map: "penjemputan_sampah_ibfk_2")
-  sampah              sampah[]
-
-  @@index([id_dropbox], map: "id_dropbox")
-  @@index([id_user], map: "id_user")
-}
-
-model sampah {
-  id_sampah          String              @id @db.VarChar(255)
-  Nama_sampah        String?             @db.VarChar(255)
-  Berat_Sampah       Decimal?            @db.Decimal(10, 2)
-  Point              Int?
-  Created_at         DateTime?           @default(now()) @db.Timestamp(0)
-  Updated_at         DateTime?           @default(now()) @db.Timestamp(0)
-  id_jenis           String?             @db.VarChar(255)
-  id_penjemputan     String?             @db.VarChar(255)
-  jenis_sampah       jenis_sampah?       @relation(fields: [id_jenis], references: [id_jenis], onDelete: NoAction, onUpdate: NoAction, map: "sampah_ibfk_1")
-  penjemputan_sampah penjemputan_sampah? @relation(fields: [id_penjemputan], references: [id_penjemputan], onDelete: NoAction, onUpdate: NoAction, map: "sampah_ibfk_2")
-
-  @@index([id_jenis], map: "id_jenis")
-  @@index([id_penjemputan], map: "id_penjemputan")
+  @@index([user_id], map: "id_user_dropbox")
 }
 
 model users {
-  id_user            Int                  @id @default(autoincrement())
-  Nama               String?              @db.VarChar(255)
-  Email              String?              @unique(map: "Email") @db.VarChar(255)
-  Password           String               @db.VarChar(255)
-  No_Telp            String?              @db.VarChar(255)
-  Tgl_Lahir          DateTime?            @db.Date
-  Alamat             String?              @db.VarChar(255)
-  NIK                String?              @unique(map: "NIK") @db.VarChar(255)
-  No_Rek             String?              @db.VarChar(255)
-  KTP_URL            String?              @db.VarChar(255)
-  KK_URL             String?              @db.VarChar(255)
-  Foto               String?              @db.VarChar(255)
-  Total_Point        Int?
-  Berat_Sampah       Decimal?             @db.Decimal(10, 1)
-  Roles              users_Roles
-  Status             users_Status         @default(Tertunda)
-  is_verified        Boolean              @default(false)
-  Created_at         DateTime?            @default(now()) @db.Timestamp(0)
-  Updated_at         DateTime?            @default(now()) @db.Timestamp(0)
-  dropbox            dropbox[]
-  penjemputan_sampah penjemputan_sampah[]
+  user_id        Int            @id @default(autoincrement())
+  name           String?        @db.VarChar(255)
+  email          String?        @unique(map: "Email") @db.VarChar(255)
+  password       String         @db.VarChar(255)
+  phone          String?        @db.VarChar(255)
+  date_of_birth  DateTime?      @db.Date
+  address        String?        @db.VarChar(255)
+  nik            String?        @unique(map: "NIK") @db.VarChar(255)
+  account_number String?        @db.VarChar(255)
+  ktp_url        String?        @db.VarChar(255)
+  kk_url         String?        @db.VarChar(255)
+  photo          String?        @db.VarChar(255)
+  total_point    Int?
+  waste_total    Int?
+  roles          users_roles
+  status         users_status   @default(pending)
+  is_verified    Boolean        @default(false)
+  created_at     DateTime?      @default(now()) @db.Timestamp(0)
+  updated_at     DateTime?      @default(now()) @db.Timestamp(0)
+  dropbox        dropbox[]
+  pickup_waste   pickup_waste[]
 }
 
-enum users_Roles {
-  Admin
-  Manajemen
-  kurir
-  Masyarakat
+model pickup_waste {
+  pickup_id      String    @id @db.VarChar(255)
+  waste_quantity Int?
+  pickup_date    DateTime? @db.Date
+  pickup_address String?   @db.VarChar(255)
+  pickup_status  String?   @db.VarChar(255)
+  total_waste    Int?
+  dropbox_id     String?   @db.VarChar(255)
+  user_id        Int
+  users          users     @relation(fields: [user_id], references: [user_id], onDelete: Cascade, map: "id_user")
+  dropbox        dropbox?  @relation(fields: [dropbox_id], references: [dropbox_id], onDelete: NoAction, onUpdate: NoAction, map: "pickup_waste_ibfk_2")
+  waste          waste[]
+
+  @@index([dropbox_id], map: "id_dropbox")
+  @@index([user_id], map: "id_user")
 }
 
-enum users_Status {
-  Diterima
-  Tertunda
-  Ditolak
+model waste {
+  waste_id      String        @id @db.VarChar(255)
+  waste_name    String?       @db.VarChar(255)
+  point         Int?
+  total_waste   Int?
+  created_at    DateTime?     @default(now()) @db.Timestamp(0)
+  updated_at    DateTime?     @default(now()) @db.Timestamp(0)
+  waste_type_id String?       @db.VarChar(255)
+  pickup_id     String?       @db.VarChar(255)
+  image         String?       @db.VarChar(255)
+  description   String        @db.Text
+  waste_type    waste_type?   @relation(fields: [waste_type_id], references: [waste_type_id], onDelete: NoAction, onUpdate: NoAction, map: "waste_ibfk_1")
+  pickup_waste  pickup_waste? @relation(fields: [pickup_id], references: [pickup_id], onDelete: NoAction, onUpdate: NoAction, map: "waste_ibfk_2")
+
+  @@index([waste_type_id], map: "id_jenis")
+  @@index([pickup_id], map: "id_penjemputan")
+}
+
+model waste_type {
+  waste_type_id   String    @id @db.VarChar(255)
+  waste_type_name String?   @db.VarChar(255)
+  created_at      DateTime? @default(now()) @db.Timestamp(0)
+  updated_at      DateTime? @default(now()) @db.Timestamp(0)
+  waste           waste[]
+}
+
+enum users_roles {
+  admin
+  management
+  courier
+  community
+}
+
+enum users_status {
+  accepted
+  pending
+  denied
 }
