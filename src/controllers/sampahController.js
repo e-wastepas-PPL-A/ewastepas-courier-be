@@ -1,29 +1,40 @@
-import {prisma} from "../database.js";
+import { prisma } from "../database.js";
 
-export const getJenisSampah = async (req, res) => {
+export const getWasteTypes = async (req, res) => {
     try {
-        const jenisSampah = await prisma.jenis_sampah.findMany();
-        res.json({ data: jenisSampah });
+        const wasteTypes = await prisma.waste_type.findMany();
+        res.json({ data: wasteTypes });
     } catch (error) {
-        res.status(500).json({ error: "Error fetching jenis sampah" });
+        console.error("Error fetching waste types:", error);
+        res.status(500).json({ error: "An error occurred while fetching waste types" });
     }
 }
 
-export const getTotalSampah = async (req, res) => {
+export const getTotalWaste = async (req, res) => {
     const { id } = req.params;
+    const userId = parseInt(id, 10);
+
+    if (isNaN(userId)) {
+        return res.status(400).json({ error: "Invalid user ID format" });
+    }
+
     try {
-        const totalSampah = await prisma.users.findUnique({
+        const totalWaste = await prisma.users.findUnique({
             where: {
-                id_user: String(id),
+                user_id: userId,
             },
             select: {
-                Berat_Sampah: true,
+                waste_total: true,
             }
         });
-        console.log(id);
-        res.json({ data: totalSampah });
+
+        if (!totalWaste) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        res.json({ data: totalWaste });
     } catch (error) {
-        console.log(error);
-        res.status(500).json({ error: "Error fetching total sampah" });
+        console.error("Error fetching total waste:", error);
+        res.status(500).json({ error: "An error occurred while fetching total waste" });
     }
 }

@@ -1,9 +1,9 @@
 import express from 'express';
-import { getJenisSampah, getTotalSampah } from '../controllers/sampahController.js';
+import {getTotalWaste, getWasteTypes} from '../controllers/sampahController.js';
 
 const router = express.Router();
 
-router.get('/sampah/jenis', getJenisSampah);
-router.get('/sampah/total/:id', getTotalSampah);
+router.get('/waste/types', getWasteTypes);
+router.get('/waste/total/:id', getTotalWaste);
 
 export default router;
