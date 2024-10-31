@@ -1,4 +1,9 @@
 import { prisma } from "../database.js";
+import * as yup from "yup";
+
+const userIdSchema = yup.object().shape({
+    id: yup.number().integer().positive().required(),
+});
 
 export const getWasteTypes = async (req, res) => {
     try {
@@ -8,15 +13,19 @@ export const getWasteTypes = async (req, res) => {
         console.error("Error fetching waste types:", error);
         res.status(500).json({ error: "An error occurred while fetching waste types" });
     }
-}
+};
 
 export const getTotalWaste = async (req, res) => {
     const { id } = req.params;
-    const userId = parseInt(id, 10);
 
-    if (isNaN(userId)) {
-        return res.status(400).json({ error: "Invalid user ID format" });
+    // Validate the user ID using yup
+    try {
+        await userIdSchema.validate({ id });
+    } catch (validationError) {
+        return res.status(400).json({ error: validationError.message });
     }
+
+    const userId = parseInt(id, 10);
 
     try {
         const totalWaste = await prisma.users.findUnique({
@@ -25,7 +34,7 @@ export const getTotalWaste = async (req, res) => {
             },
             select: {
                 waste_total: true,
-            }
+            },
         });
 
         if (!totalWaste) {
@@ -37,4 +46,4 @@ export const getTotalWaste = async (req, res) => {
         console.error("Error fetching total waste:", error);
         res.status(500).json({ error: "An error occurred while fetching total waste" });
     }
-}
+};
