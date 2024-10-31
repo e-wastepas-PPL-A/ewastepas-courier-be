@@ -1,10 +1,10 @@
 import express from 'express';
-import { getPermintaan, terimaPermintaan, getHistory } from '../controllers/penjemputanController.js';
+import { getPickupRequests, acceptPickupRequest, getPickupHistory } from '../controllers/penjemputanController.js';
 
 const router = express.Router();
 
-router.get('/penjemputan/permintaan', getPermintaan);
-router.post('/penjemputan/terima/:id', terimaPermintaan);
-router.get('/penjemputan/history/:id', getHistory);
+router.get('/pickup/requests', getPickupRequests);
+router.post('/pickup/accept/:id', acceptPickupRequest);
+router.get('/pickup/history/:id', getPickupHistory);
 
 export default router;
