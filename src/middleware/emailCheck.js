@@ -5,16 +5,16 @@ import { sendOTPEmail } from "../controllers/authController.js";
 export const emailCheck = async (req, res, next) => {
     const {email} = req.body
 
-    const user = await prisma.users.findUnique({
+    const courier = await prisma.courier.findUnique({
         where: {
-            Email: email
+            email: email
         }
     })
 
-    if(user){
-        const isVerified = user.is_verified
+    if(courier){
+        const isActive = courier.is_active
 
-        if(!isVerified){
+        if(!isActive){
             return res.status(403).json({
                 error: "Your account has not been verified",
                 email: email

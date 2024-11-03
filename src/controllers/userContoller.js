@@ -30,7 +30,7 @@ export const updateUserData = async (req, res) => {
     }
 
     try {
-        const updatedUser = await prisma.users.updateMany({
+        const updatedCourier = await prisma.courier.updateMany({
             where: {
                 id_user: id_payload
             },
@@ -46,7 +46,6 @@ export const updateUserData = async (req, res) => {
                 KK_URL: kkPath
             }
         })
-        console.log(id_params, id_payload)
         res.status(200).json({message: 'Data successfully updated', data: updatedUser})  
     } catch (error) {
         console.log(error);
