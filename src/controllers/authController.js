@@ -8,10 +8,10 @@ import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
 
 
+
 const {EMAIL,SECRET_KEYS,CLIENT_ID,CLIENT_SECRET,REDIRECT_URL,REFRESH_TOKEN} = process.env
 
 const oAuth2Client = new google.auth.OAuth2(CLIENT_ID,CLIENT_SECRET,REDIRECT_URL)
-oAuth2Client.setCredentials({refresh_token:REFRESH_TOKEN})
 
 const generatorOTP = () => {
     const otp = speakeasy.totp({
@@ -34,7 +34,69 @@ const generatePassword = (password) => {
     return passwordHash
 }
 
+// sign in google
+
+const scopes = [
+    'https://www.googleapis.com/auth/userinfo.email',
+    'https://www.googleapis.com/auth/userinfo.profile'
+];
+
+const authorizationUrl = oAuth2Client.generateAuthUrl({
+    access_type: 'offline',
+    scope: scopes,
+    include_granted_scopes: true
+})
+
+export const redirectAuth = (req, res) => {
+    res.redirect(authorizationUrl)
+}
+
+export const googleLogin = async (req, res) => {
+    const {code} = req.query
+
+    const {tokens} = await oAuth2Client.getToken(code)
+
+    oAuth2Client.setCredentials(tokens)
+
+    const oauth2 = google.oauth2({
+        auth: oAuth2Client,
+        version: 'v2'
+    })
+
+    const {data} = await oauth2.userinfo.get()
+
+    if(!data){
+        res.status(404).json({error: 'User info not found'})
+    }
+
+    const courier = await prisma.courier.findUnique({
+        where: {
+            email: data.email
+        }
+    })
+
+    if(!courier){
+        await prisma.courier.create({
+            data: {
+                email: data.email,
+                name: data.name,
+                password: ''
+            }
+        })
+    }
+
+    const payload = {
+        email: data.email,
+        name: data.name
+    }
+
+    const expiresIn = 60 * 60 *6
+    const token = generateJWT(payload, expiresIn)
+    return res.status(200).json({message: 'Login successful', token: token, user: payload})
+}
+
 export const sendOTPEmail = async (email) => {
+    oAuth2Client.setCredentials({refresh_token:REFRESH_TOKEN})
     const accessToken = await oAuth2Client.getAccessToken()
     const otp = generatorOTP()
 
@@ -73,19 +135,20 @@ export const registration = async (req, res) => {
     }
 
     const passwordHash = generatePassword(password)
+    const name = email.split("@")[0];
 
     try {
-        const newUser = await prisma.users.create({
+        const newCourier = await prisma.courier.create({
             data: {
-                Email: email,
-                Password: passwordHash,
-                Roles: 'kurir'
+                email: email,
+                password: passwordHash,
+                name: name
             }
         })
         
         await sendOTPEmail(email)
 
-        return res.status(201).json({ message: 'Registration successful.', data: newUser})
+        return res.status(201).json({ message: 'Registration successful.', data: newCourier})
     } catch (error) {
         console.error(error)
         return res.status(500).json({ error: 'An error occurred during login'})
@@ -114,12 +177,12 @@ export const verifyOTP = async (req,res) => {
     
     if(type === 'registration'){
         try {
-            await prisma.users.update({
+            await prisma.courier.update({
                 where: {
-                    Email: email
+                    email: email
                 },
                 data: {
-                    is_verified: true
+                    is_active: true
                 }
             })
             return res.status(200).json({message: 'User has been verified.'})
@@ -142,28 +205,28 @@ export const login = async (req, res) => {
     const {email, password} = req.body
 
     try {
-        const user = await prisma.users.findUnique({
-            where: { Email: email }
+        const courier = await prisma.courier.findUnique({
+            where: { email: email }
         })
     
-        if(!user){
+        if(!courier){
             return res.status(404).json({error: "User not found"})
         }
     
-        if(!user.is_verified){
+        if(!courier.is_active){
             return res.status(403).json({
                 error: "Your account has not been verified",
                 email: email
             })
         }
     
-        const match = await bcrypt.compare(password, user.Password);
+        const match = await bcrypt.compare(password, courier.password);
     
         if(match){
             const payload = {
-                id: user.id_user,
-                email: user.Email,
-                role: user.Roles
+                id: courier.courier_id,
+                email: courier.email,
+                name: courier.name
             }
             const expiresIn = 60 * 60 *6
             const token = generateJWT(payload, expiresIn)
@@ -192,12 +255,12 @@ export const forgotPassword = async (req, res) => {
     const passwordHash = generatePassword(new_password)
 
     try {
-        await prisma.users.update({
+        await prisma.courier.update({
             where: {
-                Email: email
+                email: email
             },
             data: {
-                Password: passwordHash
+                password: passwordHash
             }
         })
 
@@ -212,11 +275,11 @@ export const sendOTP = async (req, res) => {
     const {email} = req.body
 
     try {
-        const user = await prisma.users.findUnique({
-            where: {Email: email}
+        const courier = await prisma.courier.findUnique({
+            where: {email: email}
         })
 
-        if(!user){
+        if(!courier){
             return res.status(404).json({ error: 'User not found'})
         }
 
