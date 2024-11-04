@@ -15,7 +15,7 @@ export const JWTValidation = (req, res, next) => {
         req.payload = {
             id: decode.id,
             email: decode.email,
-            role: decode.role
+            name: decode.name
         }
         next();
     } );

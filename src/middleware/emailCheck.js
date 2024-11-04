@@ -12,9 +12,8 @@ export const emailCheck = async (req, res, next) => {
     })
 
     if(courier){
-        const isActive = courier.is_active
 
-        if(!isActive){
+        if(!courier.is_verified){
             return res.status(403).json({
                 error: "Your account has not been verified",
                 email: email
