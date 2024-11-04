@@ -213,14 +213,16 @@ export const login = async (req, res) => {
         })
     
         if(!courier){
-            return res.status(404).json({error: "User not found"})
+            return res.status(404).json({error: "Incorrect email or password"})
         }
     
         if(!courier.is_verified){
-            return res.status(403).json({
-                error: "Your account has not been verified",
-                email: email
-            })
+            try {
+                await sendOTPEmail(email);
+                return res.status(200).json({message: "OTP send to your email"})
+            } catch (error) {
+                return res.status(500).json({error: error})
+            }
         }
     
         const match = await bcrypt.compare(password, courier.password);
@@ -235,7 +237,7 @@ export const login = async (req, res) => {
             const token = generateJWT(payload, expiresIn)
             return res.status(200).json({message: 'Login successful', token: token, user: payload})
         } else {
-            return res.status(400).json({error: 'Incorrect password'})
+            return res.status(400).json({error: 'Incorrect email or password'})
         } 
     } catch (error) {
         console.log(error)
