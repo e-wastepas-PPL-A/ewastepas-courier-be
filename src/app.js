@@ -11,7 +11,7 @@ import dropboxRoutes from './routes/dropboxRoutes.js';
 const app = express();
 
 const corsOptions = {
-    origin: ['http://localhost:5173', 'http://127.0.0.1:5173'], // Allowed domains
+    origin: ['http://localhost:8000', 'http://127.0.0.1:8000'], // Allowed domains
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'], // Allowed HTTP methods
     credentials: true // If you want to send cookies or other credentials
 };
