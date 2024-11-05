@@ -1,4 +1,5 @@
 import { prisma } from "../database.js";
+import yup from "yup";
 
 const acceptPickupRequestSchema = yup.object().shape({
     pickup_status: yup.string().required("Pickup status is required"),
@@ -27,11 +28,16 @@ const acceptPickupRequest = async (req, res) => {
     try {
         await acceptPickupRequestSchema.validate(req.body);
 
-        const { pickup_status } = req.body;
+        const { pickup_status, courier_id } = req.body;
 
         const pickupReq = await prisma.pickup_waste.update({
-            where: { pickup_id: pickupId, user_id: req.users.user_id },
-            data: { pickup_status },
+            where: {
+                pickup_id: pickupId
+            },
+            data: {
+                pickup_status: pickup_status,
+                courier_id: courier_id
+            },
         });
 
         if (!updatedRequest) {
