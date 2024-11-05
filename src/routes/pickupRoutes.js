@@ -7,7 +7,7 @@ import {
 const router = express.Router();
 
 router.get('/pickup', getAllPickupRequest);
-router.get('/pickup/:id', acceptPickupRequest);
+router.post('/pickup/:id', acceptPickupRequest);
 
 
 export default router;
