@@ -1,5 +1,26 @@
 import { prisma } from "../database.js";
 
+const getAllWasteTypes = async (req, res) => {
+    try {
+        const wasteTypes = await prisma.waste.findMany();
+
+        // Jika tidak ada waste types ditemukan
+        if (wasteTypes.length === 0) {
+            return res.status(404).json({ message: 'No waste types found.' });
+        }
+
+        // Mengirimkan hasil ke client
+        res.status(200).json({
+            data: wasteTypes,
+        });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({
+            message: 'Error occurred while fetching waste types.',
+        });
+    }
+};
+
 const getAllWaste = async (req, res) => {
     try {
         const {id} = req.params;
@@ -81,5 +102,6 @@ const findWasteName = async (req, res) => {
 export {
     getAllWaste,
     getWasteLists,
-    findWasteName
+    findWasteName,
+    getAllWasteTypes
 };

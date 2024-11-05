@@ -1,7 +1,7 @@
 import express from 'express';
 import {
     findWasteName,
-    getAllWaste, getWasteLists
+    getAllWaste, getAllWasteTypes, getWasteLists
 } from '../controllers/wasteController.js';
 
 const router = express.Router();
@@ -9,5 +9,6 @@ const router = express.Router();
 router.get('/waste/:id', getAllWaste);
 router.get('/waste', getWasteLists);
 router.get('/waste/search', findWasteName);
+router.get('/types', getAllWasteTypes);
 
 export default router;
