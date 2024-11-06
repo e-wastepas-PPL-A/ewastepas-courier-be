@@ -4,8 +4,8 @@ import cors from 'cors'; // Change here
 import routes from './routes/index.js';
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
-import sampahRoutes from './routes/sampahRoutes.js';
-import penjemputanRoutes from './routes/penjemputanRoutes.js';
+import wasteRoutes from './routes/wasteRoutes.js';
+import pickupRoutes from './routes/pickupRoutes.js';
 import dropboxRoutes from './routes/dropboxRoutes.js';
 
 const app = express();
@@ -20,6 +20,6 @@ app.use(express.json());
 app.use(cors(corsOptions));
 
 // Use routes
-app.use('/api', routes, sampahRoutes, penjemputanRoutes, dropboxRoutes, authRoutes, userRoutes);
+app.use('/api', routes, wasteRoutes, pickupRoutes, dropboxRoutes, authRoutes, userRoutes);
 
 export default app;
