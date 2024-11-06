@@ -2,43 +2,55 @@ import { prisma } from "../database.js";
 
 const getAllWasteTypes = async (req, res) => {
     try {
-        const wasteTypes = await prisma.waste.findMany();
+        const wasteTypes = await prisma.waste_type.findMany({
+            select: {
+                waste_type_id: true,
+                waste_type_name: true,
+                image: true,
+            }
+        });
 
-        // Jika tidak ada waste types ditemukan
         if (wasteTypes.length === 0) {
             return res.status(404).json({ message: 'No waste types found.' });
         }
 
-        // Mengirimkan hasil ke client
-        res.status(200).json({
-            data: wasteTypes,
-        });
+        res.status(200).json({ data: wasteTypes });
     } catch (e) {
         console.error(e);
-        res.status(500).json({
-            message: 'Error occurred while fetching waste types.',
-        });
+        res.status(500).json({ message: 'Error occurred while fetching waste types.' });
     }
 };
 
-const getAllWaste = async (req, res) => {
+const getWasteById = async (req, res) => {
     try {
-        const {id} = req.params;
-        const wasteTypeId = parseInt(id, 10)
+        const { id } = req.params;
+        const wasteTypeId = parseInt(id, 10);
 
         const waste = await prisma.waste.findMany({
-            where:{
-                waste_type_id:wasteTypeId
-            },
-            include: {
-                waste_type: true
+            where: { waste_type_id: wasteTypeId },
+            select: {
+                waste_id: true,
+                waste_name: true,
+                image: true,
+                description: true,
+                waste_type: {
+                    select: {
+                        waste_type_id: true,
+                        waste_type_name: true,
+                        image: true,
+                    }
+                }
             }
+        });
 
-        })
-        res.json({data : waste})
+        if (waste.length === 0) {
+            return res.status(404).json({ message: 'No waste found for the given ID.' });
+        }
+
+        res.json({ data: waste });
     } catch (error) {
         console.error("Error fetching waste:", error);
-        res.status(500).json({ error: "An error occurred while fetching waste" });
+        res.status(500).json({ message: "An error occurred while fetching waste" });
     }
 };
 
@@ -71,9 +83,8 @@ const getWasteLists = async (req, res) => {
             },
         });
     } catch (error) {
-        return res
-            .status(400)
-            .json({ error: "An error occurred while fetching paginated waste list" });
+        console.error("Error fetching paginated waste list:", error);
+        res.status(500).json({ message: "An error occurred while fetching paginated waste list" });
     }
 };
 
@@ -81,26 +92,31 @@ const findWasteName = async (req, res) => {
     try {
         const wasteName = req.query.name;
 
-        console.log(wasteName)
+        if (!wasteName) {
+            return res.status(400).json({ message: 'Waste name is required.' });
+        }
 
         const waste = await prisma.waste.findMany({
             where: {
                 waste_name: {
-                    contains: wasteName,
-                }
-            }
-        })
+                    contains: wasteName
+                },
+            },
+        });
 
-        res.status(200).json({
-            data: waste,
-        })
+        if (waste.length === 0) {
+            return res.status(404).json({ message: 'No waste found with the given name.' });
+        }
+
+        res.status(200).json({ data: waste });
     } catch (e) {
-        console.error(e)
+        console.error("Error searching for waste name:", e);
+        res.status(500).json({ message: 'An error occurred while searching for waste name.' });
     }
-}
+};
 
 export {
-    getAllWaste,
+    getWasteById,
     getWasteLists,
     findWasteName,
     getAllWasteTypes
