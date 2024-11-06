@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "src/server.js",
   "scripts": {
+    "build": "babel src -d dist",
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "test": "jest -i"
@@ -33,6 +34,7 @@
     "yup": "^1.4.0"
   },
   "devDependencies": {
+    "@babel/cli": "^7.25.9",
     "@babel/preset-env": "^7.25.8",
     "@types/express": "^5.0.0",
     "@types/jest": "^29.5.13",
