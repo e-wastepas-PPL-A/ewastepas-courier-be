@@ -11,7 +11,7 @@ import dropboxRoutes from './routes/dropboxRoutes.js';
 const app = express();
 
 const corsOptions = {
-    origin: ['http://localhost:5173', 'http://127.0.0.1:5173'], // Allowed domains
+    origin: ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://34.16.66.175:8021', 'http://34.16.66.175:8020'], // Allowed domains
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'], // Allowed HTTP methods
     credentials: true // If you want to send cookies or other credentials
 };
@@ -21,5 +21,21 @@ app.use(cors(corsOptions));
 
 // Use routes
 app.use('/api', routes, wasteRoutes, pickupRoutes, dropboxRoutes, authRoutes, userRoutes);
+
+app.use((req, res, next) => {
+    if (!req.body.name) {
+        const error = new Error('Name is required');
+        error.status = 400;
+        return next(error);
+    }
+    next();
+});
+
+app.use((error, req, res, next) => {
+    res.status(error.status || 500).json({
+        message: error.message || 'Something went wrong!',
+        status: error.status || 500
+    });
+});
 
 export default app;
