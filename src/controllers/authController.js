@@ -69,25 +69,27 @@ export const googleLogin = async (req, res) => {
         res.status(404).json({error: 'User info not found'})
     }
 
-    const courier = await prisma.courier.findUnique({
+    let courier = await prisma.courier.findUnique({
         where: {
             email: data.email
         }
     })
 
     if(!courier){
-        await prisma.courier.create({
+        courier = await prisma.courier.create({
             data: {
                 email: data.email,
                 name: data.name,
-                password: ''
+                is_verified: true
             }
         })
     }
 
     const payload = {
-        email: data.email,
-        name: data.name
+        id: courier.courier_id,
+        email: courier.email,
+        name: courier.name,
+        
     }
 
     const expiresIn = 60 * 60 *6
@@ -142,13 +144,13 @@ export const registration = async (req, res) => {
             data: {
                 email: email,
                 password: passwordHash,
-                name: name
+                name: name,
             }
         })
         
         await sendOTPEmail(email)
 
-        return res.status(201).json({ message: 'Registration successful.', data: newCourier})
+        return res.status(201).json({ message: 'Registration successful.', created_at: newCourier.created_at})
     } catch (error) {
         console.error(error)
         return res.status(500).json({ error: 'An error occurred during login'})
@@ -182,7 +184,7 @@ export const verifyOTP = async (req,res) => {
                     email: email
                 },
                 data: {
-                    is_active: true
+                    is_verified: true
                 }
             })
             return res.status(200).json({message: 'User has been verified.'})
@@ -190,6 +192,7 @@ export const verifyOTP = async (req,res) => {
             console.error(error)
         }
     } else if (type === 'forgot_password') {
+
         const expiresIn = 5 * 60
         const payload = {email: email}
         const token = generateJWT(payload, expiresIn)
@@ -210,14 +213,16 @@ export const login = async (req, res) => {
         })
     
         if(!courier){
-            return res.status(404).json({error: "User not found"})
+            return res.status(404).json({error: "Incorrect email or password"})
         }
     
-        if(!courier.is_active){
-            return res.status(403).json({
-                error: "Your account has not been verified",
-                email: email
-            })
+        if(!courier.is_verified){
+            try {
+                await sendOTPEmail(email);
+                return res.status(200).json({message: "OTP send to your email"})
+            } catch (error) {
+                return res.status(500).json({error: error})
+            }
         }
     
         const match = await bcrypt.compare(password, courier.password);
@@ -232,7 +237,7 @@ export const login = async (req, res) => {
             const token = generateJWT(payload, expiresIn)
             return res.status(200).json({message: 'Login successful', token: token, user: payload})
         } else {
-            return res.status(400).json({error: 'Incorrect password'})
+            return res.status(400).json({error: 'Incorrect email or password'})
         } 
     } catch (error) {
         console.log(error)
@@ -284,8 +289,14 @@ export const sendOTP = async (req, res) => {
         }
 
         await sendOTPEmail(email)
+
+        const currentTime = new Date().toISOString()
         
-        return res.status(200).json({ message: 'OTP send to your email'})
+        return res.status(200).json({ 
+            message: 'OTP send to your email',
+            created_at: currentTime
+        })
+
     } catch(error){
         console.error(error)
         return res.status(500).json({error: 'Failed send OTP email'})

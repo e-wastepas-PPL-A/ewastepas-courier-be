@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  frontend:
+    container_name: ewastepas-courier-api
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8021:3000"
+    networks:
+      - ewastepas-bridge
+    restart: unless-stopped
+
+networks:
+  ewastepas-bridge:
+    external: true
