@@ -23,12 +23,9 @@ app.use(cors(corsOptions));
 app.use('/api', routes, wasteRoutes, pickupRoutes, dropboxRoutes, authRoutes, userRoutes);
 
 app.use((req, res, next) => {
-    if (!req.body.name) {
-        const error = new Error('Name is required');
-        error.status = 400;
-        return next(error);
-    }
-    next();
+    const error = new Error('Not Found');
+    error.status = 404;
+    next(error);
 });
 
 app.use((error, req, res, next) => {
