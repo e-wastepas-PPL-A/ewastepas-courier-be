@@ -218,115 +218,152 @@
 
 
 ## Endpoint: Melihat Jenis dan Kategori Sampah Elektronik
-- GET: `/api/sampah/jenis`
+- GET: `/api/waste`
+- Response:
+```json
+{
+     "data": [
+            {
+                "waste_id": 1,
+                "waste_type_id": 1,
+                "waste_name": "Washing Machine",
+                "image": null,
+                "description": "Large household appliance for washing clothes"
+            },
+            {
+                "waste_id": 2,
+                "waste_type_id": 2,
+                "waste_name": "Hand Blender",
+                "image": null,
+                "description": "Compact blender for small-scale food preparation"
+            },
+            ...
+         ],
+      "pagination": {
+        "total": 7,
+        "page": 1,
+        "limit": 10,
+        "totalPages": 1
+      }
+}
+```
+
+## Endpoint: Mencari Sampah Berdasarkan id
+- GET: `/api/waste/:id`
 - Response:
 ```json
 {
   "data": [
     {
-      "id": 1,
-      "nama": "Televisi",
-      "kategori": "Peralatan Rumah Tangga"
-    },
-    {
-      "id": 2,
-      "nama": "Kulkas",
-      "kategori": "Peralatan Rumah Tangga"
+      "waste_id": 1,
+      "waste_name": "Washing Machine",
+      "image": null,
+      "description": "Large household appliance for washing clothes",
+      "waste_type": {
+        "waste_type_id": 1,
+        "waste_type_name": "Large_Household_Apllience",
+        "image": null
+      }
     }
   ]
 }
 ```
 
-## Endpoint: Melihat Permintaan Penjemputan Sampah Elektronik
-- GET: `/api/penjemputan/permintaan`
+## Endpoint: Melihat Semua Type Sampah
+- GET: `/api/waste/types`
 - Response:
 ```json
 {
   "data": [
     {
-      "id": 101,
-      "alamat": "Jl. Raya No. 1",
-      "jenis_sampah": "Televisi",
-      "status": "Menunggu",
-      "tanggal": "2024-10-20"
+      "waste_type_id": 1,
+      "waste_type_name": "Large_Household_Apllience",
+      "image": null
     },
     {
-      "id": 102,
-      "alamat": "Jl. Merdeka No. 5",
-      "jenis_sampah": "Kulkas",
-      "status": "Diterima",
-      "tanggal": "2024-10-19"
+      "waste_type_id": 2,
+      "waste_type_name": "Small_Household_Appliances",
+      "image": null
+    },
+    ...
+  ]
+}
+```
+
+## Endpoint: Mencari Sampah Berdasarkan Nama
+- GET: `/api/waste/search?name=Laptop`
+- Response:
+```json
+{
+  "data": [
+    {
+      "waste_id": 3,
+      "waste_name": "Laptop",
+      "point": 25,
+      "waste_type_id": 3,
+      "image": null,
+      "description": "Portable computer device for work and entertainment",
+      "created_at": "2024-11-03T14:26:36.000Z",
+      "updated_at": "2024-11-03T14:26:36.000Z"
     }
   ]
 }
 ```
 
-## Endpoint: Menerima Permintaan Penjemputan Sampah Elektronik
-- POST: `/api/penjemputan/terima`
-- Request Body:
+
+## Endpoint: Melihat Sampah Berdasarkan ID
+- GET: `/api/pickup/totals/:id`
+- Response:
 ```json
 {
-  "permintaan_id": 101
-}
-```
-Response:
-```json
-{
-  "message": "Permintaan penjemputan berhasil diterima.",
-  "permintaan_id": 101
+    "data": [
+        {
+            "pickup_id": 1,
+            "pickup_date": "2024-11-06T00:00:00.000Z",
+            "pickup_address": "JL. ABCD",
+            "pickup_status": "accepted",
+            "dropbox_id": 1,
+            "courier_id": 1,
+            "community_id": 1,
+            "management_id": null,
+            "created_at": "2024-11-06T10:16:28.000Z",
+            "updated_at": "2024-11-06T11:59:56.000Z"
+        }
+    ]
 }
 ```
 
-## Endpoint: Melihat Lokasi Drop Box Terdekat
-- GET: `/api/dropbox/terdekat`
+## Endpoint: Melihat Semua Lokasi Dropbox
+- GET: `/api/dropbox`
 - Response:
 ```json
 {
   "data": [
     {
-      "id": 1,
-      "alamat": "Drop Box 1",
-      "jarak": "500m"
+      "dropbox_id": 1,
+      "name": "Dropbox 1",
+      "address": "Jl. Example No.1",
+      "district_address": "Bandung_Utara",
+      "longitude": "106.845599",
+      "latitude": "-6.208763",
+      "capacity": 1,
+      "status": "Available",
+      "created_at": "2024-11-03T14:23:17.000Z",
+      "updated_at": "2024-11-06T11:20:25.000Z"
     },
     {
-      "id": 2,
-      "alamat": "Drop Box 2",
-      "jarak": "1km"
-    }
-  ]
-} 
-```
-
-## Endpoint: Melihat Total Sampah Elektronik yang Sudah Dijemput
-- GET: `/api/sampah/total`
-- Response: 
-```json
-{
-  "total_sampah": 50,
-  "jenis": "Televisi"
-}
-```
-
-## Endpoint: Melihat History Penjemputan Sampah Elektronik
-- GET: `/api/penjemputan/history`
-- Response:
-```json
-{
-  "data": [
-    {
-      "id": 1,
-      "alamat": "Jl. Raya No. 1",
-      "jenis_sampah": "Televisi",
-      "tanggal": "2024-10-20",
-      "status": "Selesai"
+      "dropbox_id": 2,
+      "name": "Dropbox 2",
+      "address": "Jl. Example No.2",
+      "district_address": "Bandung_Selatan",
+      "longitude": "106.8456",
+      "latitude": "-6.208764",
+      "capacity": 0,
+      "status": "Available",
+      "created_at": "2024-11-03T14:23:17.000Z",
+      "updated_at": "2024-11-03T15:54:52.000Z"
     },
-    {
-      "id": 2,
-      "alamat": "Jl. Merdeka No. 5",
-      "jenis_sampah": "Kulkas",
-      "tanggal": "2024-10-19",
-      "status": "Selesai"
-    }
+    ...
   ]
 }
 ```
