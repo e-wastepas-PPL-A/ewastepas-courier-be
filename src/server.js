@@ -4,7 +4,7 @@ import {loadingAnimation} from "./utils/loadingAnimation.js";
 const PORT = process.env.PORT || 3000;
 
 const startServer = async () => {
-    await loadingAnimation(3000); // Adjust duration as needed
+    await loadingAnimation(500); // Adjust duration as needed
 
     try {
         app.listen(PORT, () => {
