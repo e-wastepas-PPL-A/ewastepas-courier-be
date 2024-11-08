@@ -1,6 +1,6 @@
 import express from 'express';
 import {
-    acceptPickupRequest,
+    updatePickupStatusToAccepted,
     getAllPickupRequest,
     getPickupRequestById,
     getCalculatePickupTotals
@@ -9,8 +9,8 @@ import {
 const router = express.Router();
 
 router.get('/pickup', getAllPickupRequest);
-router.get('/pickup/totals/:id', getCalculatePickupTotals);
 router.get('/pickup/:id', getPickupRequestById);
-router.post('/pickup/:id', acceptPickupRequest);
+router.patch('/pickup/acc/:id', updatePickupStatusToAccepted);
+router.get('/pickup/totals/:id', getCalculatePickupTotals);
 
 export default router;
