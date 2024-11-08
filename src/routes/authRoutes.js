@@ -1,7 +1,7 @@
 import express from 'express'
 import {verifyOTP, registration, login, forgotPassword, sendOTP, redirectAuth, googleLogin} from '../controllers/authController.js'
 import {JWTValidation} from '../middleware/JWTValidation.js'
-import { emailCheck } from '../middleware/emailCheck.js'
+import { emailCheck } from '../middleware/registrationCheck.js'
 
 const router = express.Router()
 
