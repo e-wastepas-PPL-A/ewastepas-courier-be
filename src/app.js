@@ -23,12 +23,41 @@ app.use(cors(corsOptions));
 app.use('/api', routes, wasteRoutes, pickupRoutes, dropboxRoutes, authRoutes, userRoutes);
 
 app.use((req, res, next) => {
-    const error = new Error('Not Found');
+    const error = new Error('Route not found');
     error.status = 404;
     next(error);
 });
 
 app.use((error, req, res, next) => {
+    if (error.status === 404) {
+        const redirectDuration = req.query.redirectDuration || 5000;
+        const countdownTime = redirectDuration / 1000;
+
+        return res.status(404).send(`
+            <html>
+                <head>
+                    <title>404 - Not Found</title>
+                    <script type="text/javascript">
+                        var countdown = ${countdownTime};
+                        function updateCountdown() {
+                            if (countdown >= 0) {
+                                document.getElementById("countdown").innerHTML = countdown;
+                                countdown--;
+                            } else {
+                                window.location.href = '/';
+                            }
+                        }
+                        setInterval(updateCountdown, 1000); 
+                    </script>
+                </head>
+                <body>
+                    <h1>404 - Route Not Found</h1>
+                    <p>Sorry, the page you're looking for doesn't exist. You will be redirected to the homepage in <span id="countdown">${countdownTime}</span> seconds...</p>
+                </body>
+            </html>
+        `);
+    }
+
     res.status(error.status || 500).json({
         message: error.message || 'Something went wrong!',
         status: error.status || 500
