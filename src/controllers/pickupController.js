@@ -57,6 +57,27 @@ const updatePickupStatusToAccepted = async (req, res) => {
     }
 };
 
+const updatePickupStatusToCancelled = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const pickUpId = parseInt(id, 10);
+
+        if (isNaN(pickUpId)) {
+            return res.status(400).json({ error: "Invalid pickup ID" });
+        }
+
+        const updatedPickup = await prisma.pickup_waste.update({
+            where: { pickup_id: pickUpId },
+            data: { pickup_status: 'cancelled' },
+        });
+
+        res.status(200).json({ message: 'Pickup status updated to success', data: updatedPickup });
+    } catch (error) {
+        console.error("Error updating pickup status:", error);
+        return res.status(500).json({ error: "Failed to update pickup status" });
+    }
+};
+
 const getCalculatePickupTotals = async (req, res) => {
     const today = new Date();
     const { id } = req.params;
@@ -135,5 +156,6 @@ export {
     getAllPickupRequest,
     getPickupRequestById,
     getCalculatePickupTotals,
-    updatePickupStatusToAccepted
+    updatePickupStatusToAccepted,
+    updatePickupStatusToCancelled,
 }
