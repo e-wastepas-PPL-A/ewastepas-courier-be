@@ -1,16 +1,20 @@
 import express from 'express';
 import {
-    acceptPickupRequest,
+    updatePickupStatusToAccepted,
     getAllPickupRequest,
     getPickupRequestById,
-    getCalculatePickupTotals
+    getPickupHistoryByCourier,
+    getCalculatePickupTotals,
+    updatePickupStatusToCancelled
 } from '../controllers/pickupController.js';
 
 const router = express.Router();
 
 router.get('/pickup', getAllPickupRequest);
-router.get('/pickup/totals/:id', getCalculatePickupTotals);
+router.get('/pickup-history/courier', getPickupHistoryByCourier);
 router.get('/pickup/:id', getPickupRequestById);
-router.post('/pickup/:id', acceptPickupRequest);
+router.patch('/pickup/accept/:id', updatePickupStatusToAccepted);
+router.patch('/pickup/cancel/:id', updatePickupStatusToCancelled);
+router.get('/pickup/totals/:id', getCalculatePickupTotals);
 
 export default router;

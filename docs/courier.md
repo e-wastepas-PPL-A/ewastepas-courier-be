@@ -333,6 +333,84 @@
 }
 ```
 
+## Endpoint: Termia Pickup Request
+- GET: `/api/accept/:id`
+- Response:
+```json
+{
+  "message": "Pickup status updated to success",
+  "data": {
+    "pickup_id": 123,
+    "pickup_status": "accepted",
+    // ...other pickup data
+  }
+}
+```
+
+## Endpoint: Tolak Pickup Request
+- GET: `/api/cancel/:id`
+- Response:
+```json
+{
+  "message": "Pickup status updated to success",
+  "data": {
+    "pickup_id": 123,
+    "pickup_status": "cancelled",
+    // ...other pickup data
+  }
+}
+```
+
+## Endpoint: Melihat History
+- GET `/api/pickup-history/courier`
+- Request Parameters:
+
+  | Parameter    | Type    | Required | Description                    |
+  |--------------|---------|----------|--------------------------------|
+  | courierId    | int     | ✅        | ID kurir untuk filter riwayat penjemputan |
+  | status       | string  | ❌        | Status penjemputan (pending, accepted, completed, cancelled) |
+  | startDate    | string  | ❌        | Tanggal mulai (format: YYYY-MM-DD) |
+  | endDate      | string  | ❌        | Tanggal akhir (format: YYYY-MM-DD) |
+  | search       | string  | ❌        | pencarian alamat penjemputan   |
+  | sortBy       | string  | ❌        | sorting (pickup_date, pickup_address) |
+  | order        | string  | ❌        | (asc atau desc, default: desc) |
+  | page         | int     | ❌        | Nomor halaman untuk pagination (default: 1) |
+  | limit        | int     | ❌        | Jumlah data per halaman (default: 10) |
+
+- Req Example:
+  - GET 
+  - `/api/pickup-history/courier?courierId=3&status=completed&startDate=2024-01-01&endDate=2024-12-31&search=Jl.%20Dipatiukur&sortBy=pickup_date&order=desc&page=1&limit=5`
+
+- Response:
+```json
+{
+  "data": [
+    {
+      "pickup_id": 1,
+      "pickup_date": "2024-11-01T10:30:00.000Z",
+      "pickup_address": "Jl. Dipatiukur No. 21",
+      "pickup_status": "completed",
+      "dropbox": {
+        "name": "Dropbox Bandung",
+        "address": "Jl. Soekarno Hatta"
+      },
+      "community": {
+        "name": "Komunitas A",
+        "phone": "081234567890"
+      },
+      "courier": {
+        "name": "Kurir B",
+        "email": "kurirb@example.com",
+        "phone": "085678123456"
+      }
+    }
+  ],
+  "total": 10,
+  "page": 1,
+  "totalPages": 2
+}
+```
+
 ## Endpoint: Melihat Semua Lokasi Dropbox
 - GET: `/api/dropbox`
 - Response:
