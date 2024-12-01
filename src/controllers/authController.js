@@ -118,7 +118,73 @@ export const sendOTPEmail = async (email) => {
         from: `"OTP Service E-Wastepas" ${EMAIL}`,
         to: email,
         subject: 'Your OTP Verification Code',
-        text: `Your OTP code is: ${otp}`
+        html: `<!DOCTYPE html>
+        <html lang="id">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Tampilan Email OTP</title>
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    background-color: #ffffff;
+                    margin: 0;
+                    padding: 0;
+                }
+                .email-container {
+                    max-width: 600px;
+                    margin: 50px auto;
+                    padding: 20px;
+                    border: 1px solid #d3d3d3;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+                    background-color: #f9f9f9;
+                }
+                .header {
+                    text-align: center;
+                    background-color: #005B96;
+                    color: #ffffff;
+                    padding: 10px 0;
+                    border-radius: 8px 8px 0 0;
+                }
+                .content {
+                    padding: 20px;
+                    text-align: center;
+                }
+                .otp {
+                    font-size: 36px;
+                    font-weight: bold;
+                    color: #005B96;
+                    margin: 20px 0;
+                }
+                .footer {
+                    text-align: center;
+                    color: #005B96;
+                    font-size: 14px;
+                    padding: 10px 0;
+                    border-top: 1px solid #d3d3d3;
+                    margin-top: 20px;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="email-container">
+                <div class="header">
+                    <h2>Verifikasi Kode OTP</h2>
+                </div>
+                <div class="content">
+                    <p>Halo,</p>
+                    <p>Berikut adalah kode OTP Anda untuk verifikasi:</p>
+                    <div class="otp">${otp}</div>
+                    <p>Harap masukkan kode ini dalam aplikasi untuk melanjutkan proses verifikasi.</p>
+                </div>
+                <div class="footer">
+                    <p>Jika Anda tidak melakukan permintaan ini, abaikan email ini.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        `
     });
 
     console.log('Message sent: %s', info.messageId)
