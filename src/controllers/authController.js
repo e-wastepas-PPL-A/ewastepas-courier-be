@@ -3,7 +3,6 @@ import speakeasy from 'speakeasy'
 import nodemailer from 'nodemailer'
 import { google } from 'googleapis'
 import { prisma } from '../database.js'
-import { json } from 'express'
 import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
 
@@ -66,7 +65,7 @@ export const googleLogin = async (req, res) => {
     const {data} = await oauth2.userinfo.get()
 
     if(!data){
-        res.status(404).json({error: 'User info not found'})
+        res.status(404).json({error: 'Informasi pengguna tidak ada'})
     }
 
     let courier = await prisma.courier.findUnique({
@@ -94,7 +93,7 @@ export const googleLogin = async (req, res) => {
 
     const expiresIn = 60 * 60 *6
     const token = generateJWT(payload, expiresIn)
-    return res.status(200).json({message: 'Login successful', token: token, user: payload})
+    return res.status(200).json({message: 'Login Berhasil', token: token, user: payload})
 }
 
 export const sendOTPEmail = async (email) => {
@@ -119,72 +118,71 @@ export const sendOTPEmail = async (email) => {
         to: email,
         subject: 'Your OTP Verification Code',
         html: `<!DOCTYPE html>
-        <html lang="id">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Tampilan Email OTP</title>
-            <style>
-                body {
-                    font-family: Arial, sans-serif;
-                    background-color: #ffffff;
-                    margin: 0;
-                    padding: 0;
-                }
-                .email-container {
-                    max-width: 600px;
-                    margin: 50px auto;
-                    padding: 20px;
-                    border: 1px solid #d3d3d3;
-                    border-radius: 8px;
-                    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-                    background-color: #f9f9f9;
-                }
-                .header {
-                    text-align: center;
-                    background-color: #005B96;
-                    color: #ffffff;
-                    padding: 10px 0;
-                    border-radius: 8px 8px 0 0;
-                }
-                .content {
-                    padding: 20px;
-                    text-align: center;
-                }
-                .otp {
-                    font-size: 36px;
-                    font-weight: bold;
-                    color: #005B96;
-                    margin: 20px 0;
-                }
-                .footer {
-                    text-align: center;
-                    color: #005B96;
-                    font-size: 14px;
-                    padding: 10px 0;
-                    border-top: 1px solid #d3d3d3;
-                    margin-top: 20px;
-                }
-            </style>
-        </head>
-        <body>
-            <div class="email-container">
-                <div class="header">
-                    <h2>Verifikasi Kode OTP</h2>
+            <html lang="id">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Tampilan Email OTP</title>
+                <style>
+                    body {
+                        font-family: Arial, sans-serif;
+                        background-color: #ffffff;
+                        margin: 0;
+                        padding: 0;
+                    }
+                    .email-container {
+                        max-width: 600px;
+                        margin: 50px auto;
+                        padding: 20px;
+                        border: 1px solid #d3d3d3;
+                        border-radius: 8px;
+                        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+                        background-color: #f9f9f9;
+                    }
+                    .header {
+                        text-align: center;
+                        background-color: #005B96;
+                        color: #ffffff;
+                        padding: 10px 0;
+                        border-radius: 8px 8px 0 0;
+                    }
+                    .content {
+                        padding: 20px;
+                        text-align: center;
+                    }
+                    .otp {
+                        font-size: 36px;
+                        font-weight: bold;
+                        color: #005B96;
+                        margin: 20px 0;
+                    }
+                    .footer {
+                        text-align: center;
+                        color: #005B96;
+                        font-size: 14px;
+                        padding: 10px 0;
+                        border-top: 1px solid #d3d3d3;
+                        margin-top: 20px;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="email-container">
+                    <div class="header">
+                        <h2>Verifikasi Kode OTP</h2>
+                    </div>
+                    <div class="content">
+                        <p>Halo,</p>
+                        <p>Berikut adalah kode OTP Anda untuk verifikasi:</p>
+                        <div class="otp">${otp}</div>
+                        <p>Harap masukkan kode ini dalam aplikasi untuk melanjutkan proses verifikasi.</p>
+                    </div>
+                    <div class="footer">
+                        <p>Jika Anda tidak melakukan permintaan ini, abaikan email ini.</p>
+                    </div>
                 </div>
-                <div class="content">
-                    <p>Halo,</p>
-                    <p>Berikut adalah kode OTP Anda untuk verifikasi:</p>
-                    <div class="otp">${otp}</div>
-                    <p>Harap masukkan kode ini dalam aplikasi untuk melanjutkan proses verifikasi.</p>
-                </div>
-                <div class="footer">
-                    <p>Jika Anda tidak melakukan permintaan ini, abaikan email ini.</p>
-                </div>
-            </div>
-        </body>
-        </html>
-        `
+            </body>
+            </html>`
     });
 
     console.log('Message sent: %s', info.messageId)
@@ -195,11 +193,11 @@ export const registration = async (req, res) => {
     const { email, password, confirm_password } = req.body
 
     if(!email || !password || !confirm_password){
-        return res.status(400).json({error: 'Required fields are missing. Please complete all required fields.'})
+        return res.status(400).json({error: 'Lengkapi semua formulir isian!'})
     }
 
     if(password !== confirm_password){
-        return res.status(400).json({error: 'Both passwords must be the same. Please check and re-enter.'})
+        return res.status(400).json({error: 'Password yang anda masukan harus sama!'})
     }
 
     const passwordHash = generatePassword(password)
@@ -216,10 +214,10 @@ export const registration = async (req, res) => {
         
         await sendOTPEmail(email)
 
-        return res.status(201).json({ message: 'Registration successful.', created_at: newCourier.created_at})
+        return res.status(201).json({ message: 'Registrasi berhasil', created_at: newCourier.created_at})
     } catch (error) {
         console.error(error)
-        return res.status(500).json({ error: 'An error occurred during login'})
+        return res.status(500).json({ error: 'Terjadi error ketika registrasi'})
     }
 
 }
@@ -228,7 +226,7 @@ export const verifyOTP = async (req,res) => {
     const {email, otp, type} = req.body
 
     if(!otp){
-        return res.status(400).json({error: 'OTP is required.'})
+        return res.status(400).json({error: 'Kode OTP wajib diisi!'})
     }
 
     const tokenValidates = speakeasy.totp.verify({
@@ -240,7 +238,7 @@ export const verifyOTP = async (req,res) => {
     })
 
     if(!tokenValidates){
-        return res.status(400).json({error: 'Invalid OTP'})
+        return res.status(400).json({error: 'Kode OTP tidak sesuai!'})
     }
     
     if(type === 'registration'){
@@ -253,7 +251,7 @@ export const verifyOTP = async (req,res) => {
                     is_verified: true
                 }
             })
-            return res.status(200).json({message: 'User has been verified.'})
+            return res.status(200).json({message: 'Pengguna berhasil diverifikasi'})
         } catch (error) {
             console.error(error)
         }
@@ -279,13 +277,13 @@ export const login = async (req, res) => {
         })
     
         if(!courier){
-            return res.status(404).json({error: "Incorrect email or password"})
+            return res.status(404).json({error: "Email atau password salah!"})
         }
     
         if(!courier.is_verified){
             try {
                 await sendOTPEmail(email);
-                return res.status(200).json({message: "OTP send to your email"})
+                return res.status(200).json({message: "OTP berhasil dikirim"})
             } catch (error) {
                 return res.status(500).json({error: error})
             }
@@ -301,13 +299,13 @@ export const login = async (req, res) => {
             }
             const expiresIn = 60 * 60 *6
             const token = generateJWT(payload, expiresIn)
-            return res.status(200).json({message: 'Login successful', token: token, user: payload})
+            return res.status(200).json({message: 'Login berhasil', token: token, user: payload})
         } else {
-            return res.status(400).json({error: 'Incorrect email or password'})
+            return res.status(400).json({error: 'Email atau password salah!'})
         } 
     } catch (error) {
         console.log(error)
-        return res.status(500).json({error: 'An error occurred during login'})
+        return res.status(500).json({error: 'Terdapat masalah ketika login'})
     }
 }
 
@@ -316,11 +314,11 @@ export const forgotPassword = async (req, res) => {
     const {new_password, confirm_new_password} = req.body
 
     if(!new_password || !confirm_new_password) {
-        return res.status(400).json({error: 'Required fields are missing. Please complete all required fields.'})
+        return res.status(400).json({error: 'Lengkapi semua formulir isian!'})
     }
 
     if(new_password !== confirm_new_password) {
-        return res.status(400).json({error: 'Both passwords must be the same. Please check and re-enter.'})
+        return res.status(400).json({error: 'Password yang anda masukan harus sama!'})
     }
 
     const passwordHash = generatePassword(new_password)
@@ -335,10 +333,10 @@ export const forgotPassword = async (req, res) => {
             }
         })
 
-        return res.status(200).json({message: 'Change password succesfully.'})
+        return res.status(200).json({message: 'Ubah password berhasil'})
     } catch (error) {
         console.log(error)
-        return res.status(500).json({error: 'Change password failed.'})
+        return res.status(500).json({error: 'Ubah password gagal'})
     }
 }
 
@@ -351,7 +349,7 @@ export const sendOTP = async (req, res) => {
         })
 
         if(!courier){
-            return res.status(404).json({ error: 'User not found'})
+            return res.status(404).json({ error: 'Email tidak sesuai!'})
         }
 
         await sendOTPEmail(email)
@@ -359,12 +357,12 @@ export const sendOTP = async (req, res) => {
         const currentTime = new Date().toISOString()
         
         return res.status(200).json({ 
-            message: 'OTP send to your email',
+            message: 'OTP berhasil dikirim',
             created_at: currentTime
         })
 
     } catch(error){
         console.error(error)
-        return res.status(500).json({error: 'Failed send OTP email'})
+        return res.status(500).json({error: 'Gagal mengirim OTP, Mohon coba lagi'})
     }
 }
