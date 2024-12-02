@@ -1,4 +1,6 @@
 import 'dotenv/config';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import express from 'express';
 import cors from 'cors'; // Change here
 import routes from './routes/index.js';
@@ -11,7 +13,7 @@ import dropboxRoutes from './routes/dropboxRoutes.js';
 const app = express();
 
 const corsOptions = {
-    origin: ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://34.16.66.175:8021', 'http://34.16.66.175:8020'], // Allowed domains
+    origin: ['http://localhost:8000', 'http://127.0.0.1:8000', 'http://34.16.66.175:8021', 'http://34.16.66.175:8020'], // Allowed domains
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'], // Allowed HTTP methods
     credentials: true // If you want to send cookies or other credentials
 };
@@ -21,6 +23,10 @@ app.use(cors(corsOptions));
 
 // Use routes
 app.use('/api', routes, wasteRoutes, pickupRoutes, dropboxRoutes, authRoutes, userRoutes);
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+app.use('/', express.static(path.join(__dirname, '../')));
 
 app.use((req, res, next) => {
     const error = new Error('Route not found');
