@@ -1,4 +1,6 @@
 import 'dotenv/config';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import express from 'express';
 import cors from 'cors'; // Change here
 import routes from './routes/index.js';
@@ -18,6 +20,7 @@ const corsOptions = {
     credentials: true,
     maxAge: 86400,
     allowedHeaders: ['Content-Type', 'Authorization']
+
 };
 app.use(cors(corsOptions));
 
@@ -35,6 +38,10 @@ app.use((req, res, next) => {
 });
 
 // 404 handler
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+app.use('/', express.static(path.join(__dirname, '../')));
+
 app.use((req, res, next) => {
     const error = new Error('Hmm, looks like this page doesn\'t exist.');
     error.status = 404;

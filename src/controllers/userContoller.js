@@ -1,3 +1,4 @@
+import 'dotenv/config'
 import { prisma } from '../database.js'
 import bcrypt from 'bcrypt'
 
@@ -18,16 +19,12 @@ export const getUser = async (req, res) => {
 }
 
 export const updateUserData = async (req, res) => {
+    const {SERVER_URL} = process.env
     const {name, address, nik, date_of_birth, phone_number, account_number} = req.body
     const id_payload = req.payload.id
-    // const id_params = parseInt(req.params.id, 10)
-    const fotoPath = req.files?.foto ? req.files.foto[0].path.replace(/\\/g, '/') : null;
-    const ktpPath = req.files?.ktp ? req.files.ktp[0].path.replace(/\\/g, '/') : null;
-    const kkPath = req.files?.kk ? req.files.kk[0].path.replace(/\\/g, '/') : null;
-
-    // if ( id_params !== id_payload) {
-    //     return res.status(403).json({error: "Forbidden Access"})
-    // }
+    const photoPath = req.files?.foto ? SERVER_URL+req.files.photo[0].path.replace(/\\/g, '/') : null;
+    const ktpPath = req.files?.ktp ? SERVER_URL+req.files.ktp[0].path.replace(/\\/g, '/') : null;
+    const kkPath = req.files?.kk ? SERVER_URL+req.files.kk[0].path.replace(/\\/g, '/') : null;
 
     try {
         const updatedCourier = await prisma.courier.updateMany({
@@ -41,7 +38,7 @@ export const updateUserData = async (req, res) => {
                 date_of_birth: date_of_birth,
                 phone: phone_number,
                 account_number: account_number,
-                photo: fotoPath,
+                photo: photoPath,
                 ktp_url: ktpPath,
                 kk_url: kkPath
             }
