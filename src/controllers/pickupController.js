@@ -1,4 +1,5 @@
 import { prisma } from "../database.js";
+import {logger} from "../utils/logger.js";
 
 // Constants
 const DEFAULT_PAGE_SIZE = 10;
@@ -61,7 +62,7 @@ const handleResponse = async (res, asyncFn) => {
         const result = await asyncFn();
         return res.status(200).json(result);
     } catch (error) {
-        console.error('Error:', error);
+        logger.error('Error: ', error)
         const status = error.status || 500;
         const message = error.message || 'Internal server error';
         return res.status(status).json({ error: message });
