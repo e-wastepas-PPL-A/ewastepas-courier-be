@@ -1,4 +1,5 @@
 import { prisma } from "../database.js";
+import {logger} from "../utils/logger.js";
 
 // Common response formats
 const ApiResponse = {
@@ -34,7 +35,7 @@ const asyncHandler = (handler) => async (req, res) => {
     try {
         await handler(req, res);
     } catch (error) {
-        console.error(`Error in ${handler.name}:`, error);
+        logger.error(`Error in ${handler.name}:`, error);
         const response = ApiResponse.error(
             error.message || 'An unexpected error occurred',
             error.status || 500

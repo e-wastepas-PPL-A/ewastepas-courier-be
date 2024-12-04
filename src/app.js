@@ -7,60 +7,61 @@ import userRoutes from './routes/userRoutes.js';
 import wasteRoutes from './routes/wasteRoutes.js';
 import pickupRoutes from './routes/pickupRoutes.js';
 import dropboxRoutes from './routes/dropboxRoutes.js';
+import { logger } from "./utils/logger.js";
 
 const app = express();
 
+// CORS configuration
 const corsOptions = {
-    origin: ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://34.16.66.175:8021', 'http://34.16.66.175:8020'], // Allowed domains
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'], // Allowed HTTP methods
-    credentials: true // If you want to send cookies or other credentials
+    origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:8000'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+    credentials: true,
+    maxAge: 86400,
+    allowedHeaders: ['Content-Type', 'Authorization']
 };
-
-app.use(express.json());
 app.use(cors(corsOptions));
+
+// Request parsing with limits
+app.use(express.json({ limit: '10kb' }));
+app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
 // Use routes
 app.use('/api', routes, wasteRoutes, pickupRoutes, dropboxRoutes, authRoutes, userRoutes);
 
+// Log incoming requests
 app.use((req, res, next) => {
-    const error = new Error('Route not found');
+    logger.info(`Incoming request: ${req.method} ${req.url}`);
+    next();
+});
+
+// 404 handler
+app.use((req, res, next) => {
+    const error = new Error('Hmm, looks like this page doesn\'t exist.');
     error.status = 404;
     next(error);
 });
 
+// Error handler
 app.use((error, req, res, next) => {
-    if (error.status === 404) {
-        const redirectDuration = req.query.redirectDuration || 5000;
-        const countdownTime = redirectDuration / 1000;
+    // Log error for monitoring
+    logger.error(`${error.message} - ${error.stack}`);
 
-        return res.status(404).send(`
-            <html>
-                <head>
-                    <title>404 - Not Found</title>
-                    <script type="text/javascript">
-                        var countdown = ${countdownTime};
-                        function updateCountdown() {
-                            if (countdown >= 0) {
-                                document.getElementById("countdown").innerHTML = countdown;
-                                countdown--;
-                            } else {
-                                window.location.href = '/';
-                            }
-                        }
-                        setInterval(updateCountdown, 1000); 
-                    </script>
-                </head>
-                <body>
-                    <h1>404 - Route Not Found</h1>
-                    <p>Sorry, the page you're looking for doesn't exist. You will be redirected to the homepage in <span id="countdown">${countdownTime}</span> seconds...</p>
-                </body>
-            </html>
-        `);
-    }
+    const status = error.status || 500;
+    const message = status === 500 ? 'Internal Server Error' : error.message;
 
-    res.status(error.status || 500).json({
-        message: error.message || 'Something went wrong!',
-        status: error.status || 500
+    res.status(status).json({
+        success: false,
+        status,
+        message,
+        ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
+    });
+});
+
+// Graceful shutdown handler
+process.on('SIGTERM', () => {
+    logger.info('SIGTERM received. Shutting down gracefully...');
+    server.close(() => {
+        logger.info('Process terminated!');
     });
 });
 
