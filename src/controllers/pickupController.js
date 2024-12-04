@@ -74,68 +74,66 @@ const handleResponse = async (res, asyncFn) => {
 
 // Service layer for business logic
 class PickupService {
-    static async getPickupById(pickupId) {
-        const pickup = await prisma.pickup_waste.findUnique({
-            where: { pickup_id: pickupId }
-        });
+    static async calculateTotals(courierId, timeFrame = 'day') {
+        const now = new Date();
+        let startDate;
 
-        if (!pickup) {
-            throw ErrorTypes.NOT_FOUND('pickup');
+        switch (timeFrame) {
+            case 'day':
+                startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                break;
+            case 'week':
+                startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay());
+                break;
+            case 'month':
+                startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                break;
+            default:
+                throw new Error('Invalid time frame');
         }
 
-        return pickup;
-    }
+        const statuses = [
+            { status: 'ACCEPTED', field: 'totalDelivered' },
+            { status: 'PENDING', field: 'totalOnDelivery' },
+            { status: 'COMPLETED', field: 'totalCompleted' },
+            { status: 'CANCELLED', field: 'totalCancelled' }
+        ];
 
-    static async updateStatus(pickupId, status) {
-        return prisma.pickup_waste.update({
-            where: { pickup_id: pickupId },
-            data: { pickup_status: status }
-        });
-    }
+        const totals = {};
 
-    static async getStatusCount(courierId, status, startDate) {
-        return prisma.pickup_waste.count({
-            where: {
-                pickup_status: status,
-                courier_id: courierId,
-                updated_at: { gte: startDate }
-            }
-        });
-    }
+        for (const { status, field } of statuses) {
+            totals[field] = await prisma.pickup_waste.count({
+                where: {
+                    courier_id: courierId,
+                    pickup_status: status.toLowerCase(),
+                    created_at: { gte: startDate }
+                }
+            });
+        }
 
-    static async getCourierPoints(courierId, startDate) {
-        return prisma.courier_points.findFirst({
+        // Calculate points (if applicable)
+        const pointsData = await prisma.courier_points.findFirst({
             where: {
                 courier_id: courierId,
                 updated_at: { gte: startDate }
             },
             select: { total_points: true }
         });
+
+        return {
+            timeFrame,
+            ...totals,
+            totalPoints: pointsData?.total_points ?? 0,
+            startDate
+        };
     }
 
-    static async getMonthlyDeliveries(courierId, year) {
-        return Promise.all(
-            Array.from({ length: 12 }, async (_, month) => {
-                const startOfMonth = new Date(year, month, 1);
-                const endOfMonth = new Date(year, month + 1, 0, 23, 59, 59);
-
-                const totalDelivered = await prisma.pickup_waste.count({
-                    where: {
-                        pickup_status: PickupStatus.ACCEPTED,
-                        courier_id: courierId,
-                        created_at: {
-                            gte: startOfMonth,
-                            lte: endOfMonth
-                        }
-                    }
-                });
-
-                return {
-                    month: month + 1,
-                    totalDelivered
-                };
-            })
-        );
+    static async getDetailedPickupTotals(courierId) {
+        return {
+            day: await this.calculateTotals(courierId, 'day'),
+            week: await this.calculateTotals(courierId, 'week'),
+            month: await this.calculateTotals(courierId, 'month')
+        };
     }
 }
 
@@ -242,41 +240,21 @@ export const updatePickupStatusToCompleted = (req, res) =>
 
 export const getCalculatePickupTotals = async (req, res) =>
     handleResponse(res, async () => {
+        const courierId = validateId(req.params.id, 'courier');
+
         try {
-            const courierId = validateId(req.params.id, 'courier');
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            const year = today.getFullYear();
+            const totals = await PickupService.getDetailedPickupTotals(courierId);
 
-            logger.info(`Calculating totals for Courier ID: ${courierId}`);
+            logger.info(`Pickup totals calculated for Courier ID: ${courierId}`, {
+                day: totals.day,
+                week: totals.week,
+                month: totals.month
+            });
 
-            const [
-                totalDelivered,
-                totalOnDelivery,
-                totalCanceled,
-                totalPoints,
-                monthlyData
-            ] = await Promise.all([
-                PickupService.getStatusCount(courierId, PickupStatus.ACCEPTED, today),
-                PickupService.getStatusCount(courierId, PickupStatus.PENDING, today),
-                PickupService.getStatusCount(courierId, PickupStatus.COMPLETED, today),
-                PickupService.getStatusCount(courierId, PickupStatus.CANCELLED, today),
-                PickupService.getCourierPoints(courierId, today),
-                PickupService.getMonthlyDeliveries(courierId, year)
-            ]);
-
-            return {
-                todayTotals: {
-                    totalDelivered,
-                    totalOnDelivery,
-                    totalCanceled,
-                    totalPoints: totalPoints?.total_points ?? 0
-                },
-                monthlyTotals: monthlyData
-            };
+            return { totals };
         } catch (error) {
-            logger.error(`Error in getCalculatePickupTotals: ${error.message}`, {
-                courierId: req.params.id,
+            logger.error(`Error calculating pickup totals: ${error.message}`, {
+                courierId,
                 stack: error.stack
             });
             throw error;

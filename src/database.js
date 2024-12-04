@@ -30,7 +30,7 @@ const createPrismaClient = () => {
 
 export const prisma = createPrismaClient();
 
-// Global error handler for unhandled database connection issues
+// Globals error handler for unhandled database connection issues
 process.on('unhandledRejection', (reason, promise) => {
     logger.error('Unhandled Rejection at database connection', {
         reason: reason,
