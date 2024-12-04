@@ -62,7 +62,10 @@ const handleResponse = async (res, asyncFn) => {
         const result = await asyncFn();
         return res.status(200).json(result);
     } catch (error) {
-        logger.error('Error: ', error)
+        logger.error(`Error in request: ${error.message}`, {
+            stack: error.stack,
+            status: error.status
+        });
         const status = error.status || 500;
         const message = error.message || 'Internal server error';
         return res.status(status).json({ error: message });
@@ -239,35 +242,45 @@ export const updatePickupStatusToCompleted = (req, res) =>
 
 export const getCalculatePickupTotals = async (req, res) =>
     handleResponse(res, async () => {
-        const courierId = validateId(req.params.id, 'courier');
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const year = today.getFullYear();
+        try {
+            const courierId = validateId(req.params.id, 'courier');
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const year = today.getFullYear();
 
-        const [
-            totalDelivered,
-            totalOnDelivery,
-            totalCanceled,
-            totalPoints,
-            monthlyData
-        ] = await Promise.all([
-            PickupService.getStatusCount(courierId, PickupStatus.ACCEPTED, today),
-            PickupService.getStatusCount(courierId, PickupStatus.PENDING, today),
-            PickupService.getStatusCount(courierId, PickupStatus.COMPLETED, today),
-            PickupService.getStatusCount(courierId, PickupStatus.CANCELLED, today),
-            PickupService.getCourierPoints(courierId, today),
-            PickupService.getMonthlyDeliveries(courierId, year)
-        ]);
+            logger.info(`Calculating totals for Courier ID: ${courierId}`);
 
-        return {
-            todayTotals: {
+            const [
                 totalDelivered,
                 totalOnDelivery,
                 totalCanceled,
-                totalPoints: totalPoints?.total_points ?? 0
-            },
-            monthlyTotals: monthlyData
-        };
+                totalPoints,
+                monthlyData
+            ] = await Promise.all([
+                PickupService.getStatusCount(courierId, PickupStatus.ACCEPTED, today),
+                PickupService.getStatusCount(courierId, PickupStatus.PENDING, today),
+                PickupService.getStatusCount(courierId, PickupStatus.COMPLETED, today),
+                PickupService.getStatusCount(courierId, PickupStatus.CANCELLED, today),
+                PickupService.getCourierPoints(courierId, today),
+                PickupService.getMonthlyDeliveries(courierId, year)
+            ]);
+
+            return {
+                todayTotals: {
+                    totalDelivered,
+                    totalOnDelivery,
+                    totalCanceled,
+                    totalPoints: totalPoints?.total_points ?? 0
+                },
+                monthlyTotals: monthlyData
+            };
+        } catch (error) {
+            logger.error(`Error in getCalculatePickupTotals: ${error.message}`, {
+                courierId: req.params.id,
+                stack: error.stack
+            });
+            throw error;
+        }
     });
 
 export const getPickupHistoryByCourier = async (req, res) =>
