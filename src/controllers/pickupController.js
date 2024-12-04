@@ -8,7 +8,7 @@ const DEFAULT_PAGE = 1;
 // Enums for better type safety and maintainability
 const PickupStatus = {
     ACCEPTED: 'accepted',
-    PENDING: 'pending',
+    REQUESTED: 'requested',
     CANCELLED: 'cancelled',
     COMPLETED: 'completed'
 };
@@ -94,7 +94,7 @@ class PickupService {
 
         const statuses = [
             { status: 'ACCEPTED', field: 'totalDelivered' },
-            { status: 'PENDING', field: 'totalOnDelivery' },
+            { status: 'REQUESTED', field: 'totalOnDelivery' },
             { status: 'COMPLETED', field: 'totalCompleted' },
             { status: 'CANCELLED', field: 'totalCancelled' }
         ];
