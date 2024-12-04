@@ -15,10 +15,16 @@ const app = express();
 
 // CORS configuration
 const corsOptions = {
-    origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:8000', 'http://localhost:5173', 'http://127.0.0.1:5173', "http://127.0.0.1:8000"],
+    origin: process.env.ALLOWED_ORIGINS?.split(',') || [
+        'http://localhost:8000',
+        'http://127.0.0.1:8000'
+    ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    preflightContinue: false,
 };
+
 app.use(cors(corsOptions));
 
 // Request parsing with limits
