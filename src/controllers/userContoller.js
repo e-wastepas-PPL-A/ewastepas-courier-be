@@ -20,30 +20,32 @@ export const getUser = async (req, res) => {
 
 export const updateUserData = async (req, res) => {
     const {SERVER_URL} = process.env
-    const {name, address, nik, date_of_birth, phone_number, account_number} = req.body
     const id_payload = req.payload.id
-    const photoPath = req.files?.foto ? SERVER_URL+req.files.photo[0].path.replace(/\\/g, '/') : null;
+    const photoPath = req.files?.photo ? SERVER_URL+req.files.photo[0].path.replace(/\\/g, '/') : null;
     const ktpPath = req.files?.ktp ? SERVER_URL+req.files.ktp[0].path.replace(/\\/g, '/') : null;
     const kkPath = req.files?.kk ? SERVER_URL+req.files.kk[0].path.replace(/\\/g, '/') : null;
+    const {name, address, nik, date_of_birth, phone, account_number} = req.body
+    let data = {name, address, nik, date_of_birth, phone, account_number}
+
+    const files = {
+        ktp_url: ktpPath,
+        kk_url: kkPath,
+        photo:photoPath,
+    }
+
+    if(files.ktp_url || files.kk_url || files.photo){
+        data = {...data, ...files}
+    }
 
     try {
         const updatedCourier = await prisma.courier.updateMany({
             where: {
                 courier_id: id_payload
             },
-            data: {
-                name: name,
-                address: address,
-                nik: nik,
-                date_of_birth: date_of_birth,
-                phone: phone_number,
-                account_number: account_number,
-                photo: photoPath,
-                ktp_url: ktpPath,
-                kk_url: kkPath
-            }
+            data: data
         })
-        res.status(200).json({message: 'Data successfully updated', data: updatedCourier})  
+        res.status(200).json({message: 'Data successfully updated', data: updatedCourier})
+
     } catch (error) {
         console.log(error);
         res.status(500).json({error: error}) 
