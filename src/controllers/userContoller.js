@@ -19,7 +19,7 @@ export const getUser = async (req, res) => {
 }
 
 export const updateUserData = async (req, res) => {
-    const {SERVER_URL} = process.env
+    const serverUrl = `${req.protocol}://${req.get('host')}`;
     const id_payload = req.payload.id
 
     const filterRequest = Object.keys(req.body).reduce((result, key) => {
@@ -31,13 +31,13 @@ export const updateUserData = async (req, res) => {
 
     if(req.files){
         if (req.files.ktp){
-            filterRequest.ktp_url = SERVER_URL+req.files.ktp[0].path.replace(/\\/g, '/')
+            filterRequest.ktp_url = serverUrl+'/'+req.files.ktp[0].path.replace(/\\/g, '/')
         }
         if (req.files.kk){
-            filterRequest.kk_url = SERVER_URL+req.files.kk[0].path.replace(/\\/g, '/')
+            filterRequest.kk_url = serverUrl+'/'+req.files.kk[0].path.replace(/\\/g, '/')
         }
         if (req.files.photo){
-            filterRequest.photo = SERVER_URL+req.files.photo[0].path.replace(/\\/g, '/')
+            filterRequest.photo = serverUrl+'/'+req.files.photo[0].path.replace(/\\/g, '/')
         }
     }
 
@@ -48,9 +48,7 @@ export const updateUserData = async (req, res) => {
             },
             data: filterRequest
         })
-        console.log(filterFiles)
-        console.log(filterRequest)
-        res.status(200).json({message: 'Data successfully updated', data: updatedCourier})
+        res.status(200).json({message: 'Data berhasil diperbarui', data: updatedCourier})
 
     } catch (error) {
         console.log(error);
@@ -64,11 +62,11 @@ export const changePassword = async (req, res) => {
     const {email} = req.payload
 
     if(!old_password || !new_password || !confirm_new_password) {
-        return res.status(400).json({error: 'Required fields are missing. Please complete all required fields.'})
+        return res.status(400).json({error: 'Lengkapi semua formulir isian!'})
     }
 
     if(new_password !== confirm_new_password){
-        return res.status(400).json({ error: 'Both passwords must be the same. Please check and re-enter.' })
+        return res.status(400).json({ error: 'Password yang anda masukan harus sama!' })
     }
 
     const courier = await prisma.courier.findUnique({
@@ -93,11 +91,11 @@ export const changePassword = async (req, res) => {
                     password: passwordHash
                 }
             })
-            res.status(200).json({message: 'Change password successfully.'})
+            res.status(200).json({message: 'Ubah password berhasil'})
         } catch (error) {
             console.log(error)
         }
     } else {
-        return res.status(500).json({message: 'Old password wrong'})
+        return res.status(500).json({message: 'Password lama salah'})
     }
 }
