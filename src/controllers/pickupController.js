@@ -88,6 +88,9 @@ class PickupService {
             case 'month':
                 startDate = new Date(now.getFullYear(), now.getMonth(), 1);
                 break;
+            case 'year':
+                startDate = new Date(now.getFullYear(), 1);
+                break;
             default:
                 throw new Error('Invalid time frame');
         }
@@ -111,19 +114,9 @@ class PickupService {
             });
         }
 
-        // Calculate points (if applicable)
-        const pointsData = await prisma.courier_points.findFirst({
-            where: {
-                courier_id: courierId,
-                updated_at: { gte: startDate }
-            },
-            select: { total_points: true }
-        });
-
         return {
             timeFrame,
             ...totals,
-            totalPoints: pointsData?.total_points ?? 0,
             startDate
         };
     }
@@ -132,7 +125,8 @@ class PickupService {
         return {
             day: await this.calculateTotals(courierId, 'day'),
             week: await this.calculateTotals(courierId, 'week'),
-            month: await this.calculateTotals(courierId, 'month')
+            month: await this.calculateTotals(courierId, 'month'),
+            year: await this.calculateTotals(courierId, 'year'),
         };
     }
 }
@@ -248,7 +242,8 @@ export const getCalculatePickupTotals = async (req, res) =>
             logger.info(`Pickup totals calculated for Courier ID: ${courierId}`, {
                 day: totals.day,
                 week: totals.week,
-                month: totals.month
+                month: totals.month,
+                year: totals.year,
             });
 
             return { totals };
