@@ -89,7 +89,7 @@ class PickupService {
                 startDate = new Date(now.getFullYear(), now.getMonth(), 1);
                 break;
             case 'year':
-                startDate = new Date(now.getFullYear(), 1);
+                startDate = new Date(now.getFullYear(), 0, 1);
                 break;
             default:
                 throw new Error('Invalid time frame');
@@ -263,21 +263,23 @@ export const updatePickupStatusToCompleted = (req, res) =>
 export const getCalculatePickupTotals = async (req, res) =>
     handleResponse(res, async () => {
         const courierId = validateId(req.params.id, 'courier');
+        const { timePeriod } = req.query;
 
         try {
-            const totals = await PickupService.getDetailedPickupTotals(courierId);
+            const totals = timePeriod
+                ? await PickupService.calculateTotals(courierId, timePeriod)
+                : await PickupService.getDetailedPickupTotals(courierId);
 
             logger.info(`Pickup totals calculated for Courier ID: ${courierId}`, {
-                day: totals.day,
-                week: totals.week,
-                month: totals.month,
-                year: totals.year,
+                timePeriod: timePeriod || 'all periods',
+                totals
             });
 
             return { totals };
         } catch (error) {
             logger.error(`Error calculating pickup totals: ${error.message}`, {
                 courierId,
+                timePeriod,
                 stack: error.stack
             });
             throw error;

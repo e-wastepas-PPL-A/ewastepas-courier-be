@@ -85,7 +85,9 @@ router.get(
 
 router.get(
     '/pickup/courier/:id/totals',
-    validateIdParam,
+    [
+        validateIdParam,
+    ],
     getCalculatePickupTotals
 );
 
