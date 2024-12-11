@@ -164,7 +164,7 @@ export const getAllPickupRequest = async (req, res) =>
             })
         };
 
-        const [historyData, totalCount] = await Promise.all([
+        const [historyData, pickupDetails, totalCount] = await Promise.all([
             prisma.pickup_waste.findMany({
                 where: filters,
                 orderBy: { [validatedSortBy]: validatedOrder },
@@ -195,11 +195,39 @@ export const getAllPickupRequest = async (req, res) =>
                     }
                 }
             }),
+            prisma.$queryRaw`
+                SELECT 
+                    pd.pickup_id, 
+                    pd.quantity, 
+                    w.waste_name
+                FROM 
+                    pickup_detail pd
+                JOIN 
+                    waste w ON pd.waste_id = w.waste_id
+            `,
             prisma.pickup_waste.count({ where: filters })
         ]);
 
+        // Group pickup details by pickup_id
+        const pickupDetailsMap = pickupDetails.reduce((acc, detail) => {
+            if (!acc[detail.pickup_id]) {
+                acc[detail.pickup_id] = [];
+            }
+            acc[detail.pickup_id].push({
+                quantity: detail.quantity,
+                wasteName: detail.waste_name
+            });
+            return acc;
+        }, {});
+
+        // Merge pickup details with pickup waste data
+        const transformedData = historyData.map(pickup => ({
+            ...pickup,
+            wasteDetails: pickupDetailsMap[pickup.pickup_id] || []
+        }));
+
         return {
-            data: historyData,
+            data: transformedData,
             total: totalCount,
             page: parseInt(page, 10),
             totalPages: Math.ceil(totalCount / pagination.take)
