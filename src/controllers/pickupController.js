@@ -89,7 +89,7 @@ class PickupService {
                 startDate = new Date(now.getFullYear(), now.getMonth(), 1);
                 break;
             case 'year':
-                startDate = new Date(now.getFullYear(), 1);
+                startDate = new Date(now.getFullYear(), 0, 1);
                 break;
             default:
                 throw new Error('Invalid time frame');
@@ -164,7 +164,7 @@ export const getAllPickupRequest = async (req, res) =>
             })
         };
 
-        const [historyData, totalCount] = await Promise.all([
+        const [historyData, pickupDetails, totalCount] = await Promise.all([
             prisma.pickup_waste.findMany({
                 where: filters,
                 orderBy: { [validatedSortBy]: validatedOrder },
@@ -195,11 +195,39 @@ export const getAllPickupRequest = async (req, res) =>
                     }
                 }
             }),
+            prisma.$queryRaw`
+                SELECT 
+                    pd.pickup_id, 
+                    pd.quantity, 
+                    w.waste_name
+                FROM 
+                    pickup_detail pd
+                JOIN 
+                    waste w ON pd.waste_id = w.waste_id
+            `,
             prisma.pickup_waste.count({ where: filters })
         ]);
 
+        // Group pickup details by pickup_id
+        const pickupDetailsMap = pickupDetails.reduce((acc, detail) => {
+            if (!acc[detail.pickup_id]) {
+                acc[detail.pickup_id] = [];
+            }
+            acc[detail.pickup_id].push({
+                quantity: detail.quantity,
+                wasteName: detail.waste_name
+            });
+            return acc;
+        }, {});
+
+        // Merge pickup details with pickup waste data
+        const transformedData = historyData.map(pickup => ({
+            ...pickup,
+            wasteDetails: pickupDetailsMap[pickup.pickup_id] || []
+        }));
+
         return {
-            data: historyData,
+            data: transformedData,
             total: totalCount,
             page: parseInt(page, 10),
             totalPages: Math.ceil(totalCount / pagination.take)
@@ -235,21 +263,23 @@ export const updatePickupStatusToCompleted = (req, res) =>
 export const getCalculatePickupTotals = async (req, res) =>
     handleResponse(res, async () => {
         const courierId = validateId(req.params.id, 'courier');
+        const { timePeriod } = req.query;
 
         try {
-            const totals = await PickupService.getDetailedPickupTotals(courierId);
+            const totals = timePeriod
+                ? await PickupService.calculateTotals(courierId, timePeriod)
+                : await PickupService.getDetailedPickupTotals(courierId);
 
             logger.info(`Pickup totals calculated for Courier ID: ${courierId}`, {
-                day: totals.day,
-                week: totals.week,
-                month: totals.month,
-                year: totals.year,
+                timePeriod: timePeriod || 'all periods',
+                totals
             });
 
             return { totals };
         } catch (error) {
             logger.error(`Error calculating pickup totals: ${error.message}`, {
                 courierId,
+                timePeriod,
                 stack: error.stack
             });
             throw error;
