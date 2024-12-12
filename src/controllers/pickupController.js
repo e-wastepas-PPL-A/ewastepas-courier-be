@@ -74,60 +74,83 @@ const handleResponse = async (res, asyncFn) => {
 
 // Service layer for business logic
 class PickupService {
-    static async calculateTotals(courierId, timeFrame = 'day') {
-        const now = new Date();
-        let startDate;
+    static #STATUSES = [
+        { status: 'ACCEPTED', field: 'totalDelivered' },
+        { status: 'REQUESTED', field: 'totalOnDelivery' },
+        { status: 'COMPLETED', field: 'totalCompleted' },
+        { status: 'CANCELLED', field: 'totalCancelled' }
+    ];
 
-        switch (timeFrame) {
-            case 'day':
-                startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                break;
-            case 'week':
-                startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay());
-                break;
-            case 'month':
-                startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-                break;
-            case 'year':
-                startDate = new Date(now.getFullYear(), 0, 1);
-                break;
-            default:
-                throw new Error('Invalid time frame');
+    static async calculateTotals(courierId, options = {}) {
+        const {
+            timeFrame = 'day',
+            startDate: customStartDate,
+            endDate: customEndDate
+        } = options;
+
+        // Default time frame calculation if no custom dates provided
+        let startDate = customStartDate;
+        let endDate = customEndDate;
+
+        if (!startDate || !endDate) {
+            const now = new Date();
+            switch (timeFrame) {
+                case 'day':
+                    startDate = startDate || new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                    endDate = endDate || new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+                    break;
+                case 'week':
+                    startDate = startDate || new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay());
+                    endDate = endDate || new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay() + 7);
+                    break;
+                case 'month':
+                    startDate = startDate || new Date(now.getFullYear(), now.getMonth(), 1);
+                    endDate = endDate || new Date(now.getFullYear(), now.getMonth() + 1, 1);
+                    break;
+                case 'year':
+                    startDate = startDate || new Date(now.getFullYear(), 0, 1);
+                    endDate = endDate || new Date(now.getFullYear() + 1, 0, 1);
+                    break;
+                default:
+                    throw new Error('Invalid time frame');
+            }
         }
 
-        const statuses = [
-            { status: 'ACCEPTED', field: 'totalDelivered' },
-            { status: 'REQUESTED', field: 'totalOnDelivery' },
-            { status: 'COMPLETED', field: 'totalCompleted' },
-            { status: 'CANCELLED', field: 'totalCancelled' }
-        ];
-
-        const totals = {};
-
-        for (const { status, field } of statuses) {
-            totals[field] = await prisma.pickup_waste.count({
-                where: {
-                    courier_id: courierId,
-                    pickup_status: status.toLowerCase(),
-                    created_at: { gte: startDate }
-                }
-            });
-        }
+        // Use Promise.all for concurrent queries
+        const totals = await Promise.all(
+            this.#STATUSES.map(async ({ status, field }) => ({
+                [field]: await prisma.pickup_waste.count({
+                    where: {
+                        courier_id: courierId,
+                        pickup_status: status.toLowerCase(),
+                        created_at: {
+                            gte: startDate,
+                            lt: endDate
+                        }
+                    }
+                })
+            }))
+        );
 
         return {
             timeFrame,
-            ...totals,
-            startDate
+            ...Object.assign({}, ...totals),
+            startDate,
+            endDate
         };
     }
 
-    static async getDetailedPickupTotals(courierId) {
-        return {
-            day: await this.calculateTotals(courierId, 'day'),
-            week: await this.calculateTotals(courierId, 'week'),
-            month: await this.calculateTotals(courierId, 'month'),
-            year: await this.calculateTotals(courierId, 'year'),
-        };
+    static async getDetailedPickupTotals(courierId, options = {}) {
+        const baseOptions = { ...options };
+
+        const [day, week, month, year] = await Promise.all([
+            this.calculateTotals(courierId, { ...baseOptions, timeFrame: 'day' }),
+            this.calculateTotals(courierId, { ...baseOptions, timeFrame: 'week' }),
+            this.calculateTotals(courierId, { ...baseOptions, timeFrame: 'month' }),
+            this.calculateTotals(courierId, { ...baseOptions, timeFrame: 'year' })
+        ]);
+
+        return { day, week, month, year };
     }
 
     static async updateStatus(pickupId, status, courierId) {
@@ -276,25 +299,81 @@ export const updatePickupStatusToCompleted = (req, res) =>
 export const getCalculatePickupTotals = async (req, res) =>
     handleResponse(res, async () => {
         const courierId = validateId(req.params.id, 'courier');
-        const { timePeriod } = req.query;
+        const {
+            timePeriod,
+            startDate,
+            endDate
+        } = req.query;
+
+        // Validate input
+        const options = {};
+
+        if (timePeriod) {
+            if (!['day', 'week', 'month', 'year'].includes(timePeriod)) {
+                throw new BadRequestError('Invalid time period. Must be day, week, month, or year.');
+            }
+            options.timeFrame = timePeriod;
+        }
+
+        // Parse and validate dates if provided
+        if (startDate) {
+            const parsedStartDate = new Date(startDate);
+            if (isNaN(parsedStartDate.getTime())) {
+                throw new BadRequestError('Invalid start date format');
+            }
+            options.startDate = parsedStartDate;
+        }
+
+        if (endDate) {
+            const parsedEndDate = new Date(endDate);
+            if (isNaN(parsedEndDate.getTime())) {
+                throw new BadRequestError('Invalid end date format');
+            }
+            options.endDate = parsedEndDate;
+        }
+
+        // Validate date range if both provided
+        if (options.startDate && options.endDate && options.startDate >= options.endDate) {
+            throw new BadRequestError('Start date must be before end date');
+        }
 
         try {
             const totals = timePeriod
-                ? await PickupService.calculateTotals(courierId, timePeriod)
-                : await PickupService.getDetailedPickupTotals(courierId);
+                ? await PickupService.calculateTotals(courierId, options)
+                : await PickupService.getDetailedPickupTotals(courierId, options);
 
-            logger.info(`Pickup totals calculated for Courier ID: ${courierId}`, {
-                timePeriod: timePeriod || 'all periods',
+            // Logging with additional context
+            logger.info('Pickup totals calculated', {
+                context: {
+                    courierId,
+                    timePeriod: timePeriod || 'all periods',
+                    dateRange: {
+                        start: options.startDate,
+                        end: options.endDate
+                    },
+                    totalCount: Object.values(totals).reduce((sum, period) =>
+                        sum + (period.totalDelivered || 0) +
+                        (period.totalOnDelivery || 0) +
+                        (period.totalCompleted || 0) +
+                        (period.totalCancelled || 0), 0)
+                },
                 totals
             });
 
             return { totals };
         } catch (error) {
-            logger.error(`Error calculating pickup totals: ${error.message}`, {
-                courierId,
-                timePeriod,
+            logger.error('Failed to calculate pickup totals', {
+                error: {
+                    message: error.message,
+                    name: error.name,
+                    courierId,
+                    timePeriod,
+                    startDate,
+                    endDate
+                },
                 stack: error.stack
             });
+
             throw error;
         }
     });
