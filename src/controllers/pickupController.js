@@ -130,13 +130,14 @@ class PickupService {
         };
     }
 
-    static async updateStatus(pickupId, status) {
+    static async updateStatus(pickupId, status, courierId) {
         return await prisma.pickup_waste.update({
             where: {
                 pickup_id: pickupId,
             },
             data: {
                 pickup_status: status,
+                ...(courierId && { courier_id: courierId }),
             }
         });
     }
@@ -254,7 +255,8 @@ export const updatePickupStatus = async (req, res, status) =>
     handleResponse(res, async () => {
         const updatedPickup = await PickupService.updateStatus(
             validateId(req.params.id),
-            status
+            status,
+            req.query.courierId,
         );
         return {
             message: `Pickup status updated to ${status}`,
