@@ -1,50 +1,73 @@
 import { prisma } from "../database.js";
-import {logger} from "../utils/logger.js";
+import { logger } from "../utils/logger.js";
 
-// Common response formats
-const ApiResponse = {
-    success: (data, message = 'Success') => ({
-        success: true,
-        message,
-        data
-    }),
-    error: (message = 'Internal server error', status = 500) => ({
-        success: false,
-        message,
-        status
-    })
-};
-
-// Validation helpers
-const validatePagination = (page = 1, limit = 10) => ({
-    page: Math.max(1, parseInt(page, 10)),
-    limit: Math.min(100, Math.max(1, parseInt(limit, 10))), // Prevent excessive limit values
-    skip: (Math.max(1, parseInt(page, 10)) - 1) * parseInt(limit, 10)
-});
-
-const validateId = (id) => {
-    const parsed = parseInt(id, 10);
-    if (isNaN(parsed) || parsed <= 0) {
-        throw new Error('Invalid ID provided');
+// Centralized response handling with more robust methods
+class ApiResponse {
+    static success(data, message = 'Success', meta = {}) {
+        return {
+            success: true,
+            message,
+            data,
+            ...meta
+        };
     }
-    return parsed;
+
+    static error(message = 'Internal server error', status = 500, details = {}) {
+        return {
+            success: false,
+            message,
+            status,
+            ...details
+        };
+    }
+}
+
+// Enhanced validation helpers with more descriptive errors
+const ValidationHelpers = {
+    validatePagination(page = 1, limit = 10) {
+        const parsedPage = Math.max(1, parseInt(page, 10));
+        const parsedLimit = Math.min(100, Math.max(1, parseInt(limit, 10)));
+
+        return {
+            page: parsedPage,
+            limit: parsedLimit,
+            skip: (parsedPage - 1) * parsedLimit
+        };
+    },
+
+    validateId(id, entityName = 'ID') {
+        const parsed = parseInt(id, 10);
+        if (isNaN(parsed) || parsed <= 0) {
+            throw new Error(`Invalid ${entityName} provided`);
+        }
+        return parsed;
+    }
 };
 
-// Error handler wrapper
+// Centralized error handler with improved logging and error handling
 const asyncHandler = (handler) => async (req, res) => {
     try {
         await handler(req, res);
     } catch (error) {
-        logger.error(`Error in ${handler.name}:`, error);
+        logger.error(`Error in ${handler.name}:`, {
+            message: error.message,
+            stack: error.stack,
+            path: req.path,
+            method: req.method
+        });
+
+        const status = error.status || (error.code === 'P2025' ? 404 : 500);
         const response = ApiResponse.error(
             error.message || 'An unexpected error occurred',
-            error.status || 500
+            status,
+            { path: req.path }
         );
+
         res.status(response.status).json(response);
     }
 };
 
-// Constants for common selections
+// Constants for common selections (unchanged)
 const WASTE_TYPE_SELECT = {
     waste_type_id: true,
     waste_type_name: true,
@@ -59,7 +82,7 @@ const WASTE_SELECT = {
     waste_type_id: true,
 };
 
-// Controller functions
+// Optimized controller functions with improved error handling and logging
 export const getAllWasteTypes = asyncHandler(async (req, res) => {
     const wasteTypes = await prisma.waste_type.findMany({
         select: WASTE_TYPE_SELECT,
@@ -75,7 +98,7 @@ export const getAllWasteTypes = asyncHandler(async (req, res) => {
 });
 
 export const getWasteById = asyncHandler(async (req, res) => {
-    const wasteTypeId = validateId(req.params.id);
+    const wasteTypeId = ValidationHelpers.validateId(req.params.id, 'Waste Type');
 
     const waste = await prisma.waste.findMany({
         where: { waste_type_id: wasteTypeId },
@@ -97,7 +120,10 @@ export const getWasteById = asyncHandler(async (req, res) => {
 });
 
 export const getWasteLists = asyncHandler(async (req, res) => {
-    const { page, limit, skip } = validatePagination(req.query.page, req.query.limit);
+    const { page, limit, skip } = ValidationHelpers.validatePagination(
+        req.query.page,
+        req.query.limit
+    );
     const search = req.query.search?.trim();
 
     // Build where clause conditionally
@@ -108,7 +134,7 @@ export const getWasteLists = asyncHandler(async (req, res) => {
         }
     } : undefined;
 
-    // Execute queries in parallel
+    // Execute queries in parallel with improved error tracking
     const [wasteData, totalWasteCount] = await Promise.all([
         prisma.waste.findMany({
             where,
@@ -145,6 +171,7 @@ export const findWasteName = asyncHandler(async (req, res) => {
         where: {
             waste_name: {
                 contains: name,
+                mode: 'insensitive'
             }
         },
         select: WASTE_SELECT,
@@ -160,17 +187,45 @@ export const findWasteName = asyncHandler(async (req, res) => {
     res.json(ApiResponse.success(waste));
 });
 
-const cache = {
-    get: async (key) => null,
-    set: async (key, value, ttl) => null
+// Simplified cache implementation with more flexibility
+const createCache = () => {
+    const cache = new Map();
+
+    return {
+        get: async (key) => {
+            const item = cache.get(key);
+            return item && item.expires > Date.now() ? item.value : null;
+        },
+        set: async (key, value, ttl = 3600) => {
+            cache.set(key, {
+                value,
+                expires: Date.now() + (ttl * 1000)
+            });
+        },
+        clear: async (key) => {
+            cache.delete(key);
+        }
+    };
 };
 
-export const withCache = (key, ttl = 3600) => async (req, res, next) => {
+export const withCache = (getCacheKey, ttl = 3600) => async (req, res, next) => {
+    const cache = createCache();
+
     try {
-        const cached = await cache.get(key);
+        const cacheKey = typeof getCacheKey === 'function'
+            ? getCacheKey(req)
+            : getCacheKey;
+
+        const cached = await cache.get(cacheKey);
         if (cached) {
-            return res.json(JSON.parse(cached));
+            return res.json(cached);
         }
+
+        // Attach cache method to response
+        res.locals.cache = {
+            set: async (data) => await cache.set(cacheKey, data, ttl)
+        };
+
         next();
     } catch (error) {
         next(error);

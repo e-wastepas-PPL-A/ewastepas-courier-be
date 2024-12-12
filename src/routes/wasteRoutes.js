@@ -62,6 +62,7 @@ const validateIdParam = (req, res, next) => {
 router.route('/waste')
     .get(
         validatePaginationQuery,
+        withCache('waste'),
         getWasteLists
     );
 
