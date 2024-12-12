@@ -1,4 +1,4 @@
-import { prisma } from "../database.js";
+import {prisma} from "../database.js";
 import {logger} from "../utils/logger.js";
 
 // Constants
@@ -128,6 +128,17 @@ class PickupService {
             month: await this.calculateTotals(courierId, 'month'),
             year: await this.calculateTotals(courierId, 'year'),
         };
+    }
+
+    static async updateStatus(pickupId, status) {
+        return await prisma.pickup_waste.update({
+            where: {
+                pickup_id: pickupId,
+            },
+            data: {
+                pickup_status: status,
+            }
+        });
     }
 }
 
