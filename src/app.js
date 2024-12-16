@@ -15,7 +15,7 @@ const app = express();
 
 // CORS configuration
 const corsOptions = {
-    origin: ['http://localhost:8000', 'http://127.0.0.1:8000', 'http://34.16.66.175:8020/'],  // Allow requests from localhost:8000
+    origin: '*',  // Allow requests from localhost:8000
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],  // Allow these HTTP methods
     credentials: true,  // If your frontend needs to send credentials like cookies
 };
