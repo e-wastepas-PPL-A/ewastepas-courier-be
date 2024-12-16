@@ -6,7 +6,8 @@
     "build": "babel src -d dist",
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "test": "jest -i"
+    "test": "jest -i",
+    "vercel-build": "prisma generate && babel src -d dist"
   },
   "jest": {
     "transform": {
