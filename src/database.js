@@ -16,24 +16,79 @@ const createPrismaClient = () => {
         ]
     });
 
-    // Detailed logging for database operations
+    // Enhanced logging with correlation ID and more detailed tracing
     prisma.$on('query', (e) => {
-        logger.info(`Query: ${e.query}, Params: ${e.params}, Duration: ${e.duration}ms`);
+        const correlationId = crypto.randomUUID(); // Generate a unique trace ID
+        logger.info({
+            message: 'Database Query Execution',
+            correlationId: correlationId,
+            query: e.query,
+            params: e.params,
+            duration: `${e.duration}ms`,
+            timestamp: new Date().toISOString()
+        });
     });
 
     prisma.$on('error', (e) => {
-        logger.error('Prisma Error', { message: e.message });
+        const correlationId = crypto.randomUUID(); // Generate a unique trace ID
+        logger.error({
+            message: 'Prisma Database Error',
+            correlationId: correlationId,
+            errorMessage: e.message,
+            timestamp: new Date().toISOString(),
+            // Optionally add more context like stack trace
+            stack: e.stack
+        });
     });
+
+    // Add connection lifecycle logging
+    prisma.$connect()
+        .then(() => {
+            logger.info({
+                message: 'Prisma Database Connection Established',
+                timestamp: new Date().toISOString()
+            });
+        })
+        .catch((error) => {
+            logger.error({
+                message: 'Failed to Connect to Database',
+                error: error.message,
+                timestamp: new Date().toISOString()
+            });
+        });
 
     return prisma;
 };
 
 export const prisma = createPrismaClient();
 
-// Globals error handler for unhandled database connection issues
+// Global error handler for unhandled database connection issues
 process.on('unhandledRejection', (reason, promise) => {
-    logger.error('Unhandled Rejection at database connection', {
+    const correlationId = crypto.randomUUID(); // Generate a unique trace ID
+    logger.error({
+        message: 'Unhandled Rejection at Database Connection',
+        correlationId: correlationId,
         reason: reason,
-        promise: promise
+        promise: promise,
+        timestamp: new Date().toISOString()
     });
+});
+
+// Optional: Graceful shutdown handler
+process.on('SIGINT', async () => {
+    try {
+        await prisma.$disconnect();
+        logger.info({
+            message: 'Prisma Database Connection Gracefully Disconnected',
+            timestamp: new Date().toISOString()
+        });
+        process.exit(0);
+    } catch (error) {
+        logger.error({
+            message: 'Error during database disconnection',
+            error: error.message,
+            timestamp: new Date().toISOString()
+        });
+        process.exit(1);
+    }
 });
