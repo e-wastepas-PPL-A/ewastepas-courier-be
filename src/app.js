@@ -25,7 +25,7 @@ const corsOptions = {
 
 // Middleware to add correlation ID for tracing
 const addCorrelationId = (req, res, next) => {
-    const correlationId = req.headers['x-correlation-id'] || crypto.randomUUID();
+    const correlationId = req.headers['x-correlation-id'];
     req.correlationId = correlationId;
     res.setHeader('X-Correlation-Id', correlationId);
     next();
