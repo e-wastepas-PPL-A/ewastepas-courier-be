@@ -37,7 +37,8 @@ const ErrorTypes = {
     INVALID_ID: (type) => new AppError(400, `Invalid ${type} ID`),
     NOT_FOUND: (type) => new AppError(404, `No ${type} found for the given ID`),
     INVALID_SORT: () => new AppError(400, 'Invalid sort parameters'),
-    SERVER_ERROR: (message) => new AppError(500, message || 'Internal server error')
+    SERVER_ERROR: (message) => new AppError(500, message || 'Internal server error'),
+    VALIDATION_ERROR: (message) => new AppError(400, message)
 };
 
 // Utility functions
@@ -153,13 +154,24 @@ class PickupService {
         return { day, week, month, year };
     }
 
-    static async updateStatus(pickupId, status, courierId) {
+    static async updateStatus(pickupId, status, courierId, reason = null) {
+        // Validate status
+        if (!Object.values(PickupStatus).includes(status)) {
+            throw ErrorTypes.VALIDATION_ERROR('Invalid pickup status');
+        }
+
+        // Validate reason for rejection
+        if (status === PickupStatus.CANCELLED && !reason) {
+            throw ErrorTypes.VALIDATION_ERROR('Reason is required when rejecting a pickup');
+        }
+
         return await prisma.pickup_waste.update({
             where: {
                 pickup_id: pickupId,
             },
             data: {
                 pickup_status: status,
+                reason: status === PickupStatus.CANCELLED ? reason : null,
                 ...(courierId ? { courier_id: parseInt(courierId, 10) } : {}),
             }
         });
@@ -276,10 +288,12 @@ export const getPickupRequestById = async (req, res) =>
 
 export const updatePickupStatus = async (req, res, status) =>
     handleResponse(res, async () => {
+        const { reason } = req.body;
         const updatedPickup = await PickupService.updateStatus(
             validateId(req.params.id),
             status,
             req.query.courierId,
+            reason
         );
         return {
             message: `Pickup status updated to ${status}`,

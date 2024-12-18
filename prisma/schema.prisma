@@ -12,7 +12,7 @@ model community {
   name             String             @db.VarChar(50)
   email            String             @unique(map: "email") @db.VarChar(50)
   password         String?            @db.VarChar(255)
-  phone            String?            @unique(map: "phone") @db.VarChar(15)
+  phone            String?            @unique(map: "phone") @db.VarChar(255)
   date_of_birth    DateTime?          @db.Date
   address          String?            @db.VarChar(255)
   photo            String?            @db.VarChar(255)
@@ -117,6 +117,7 @@ model pickup_waste {
   courier_id     Int?
   community_id   Int?
   management_id  Int?
+  reason         String                      @db.Text
   created_at     DateTime?                   @default(now()) @db.Timestamp(0)
   updated_at     DateTime?                   @default(now()) @db.Timestamp(0)
   pickup_detail  pickup_detail[]             @ignore
@@ -154,6 +155,261 @@ model waste_type {
   created_at      DateTime?                  @default(now()) @db.Timestamp(0)
   updated_at      DateTime?                  @default(now()) @db.Timestamp(0)
   waste           waste[]
+}
+
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view view_dropbox_status {
+  dropbox_id       Int @default(0)
+  dropbox_name     Int @default(0)
+  address          Int @default(0)
+  district_address Int @default(0)
+  capacity         Int @default(0)
+  status           Int @default(0)
+  capacity_status  Int @default(0)
+  created_at       Int @default(0)
+  updated_at       Int @default(0)
+
+  @@ignore
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view view_total_pickup_history {
+  pickup_id        Int @default(0)
+  pickup_date      Int @default(0)
+  pickup_address   Int @default(0)
+  pickup_status    Int @default(0)
+  Drop_Box_Name    Int @default(0) @map("Drop Box Name")
+  district_address Int @default(0)
+  waste_type_name  Int @default(0)
+  total_quantity   Int @default(0)
+  total_points     Int @default(0)
+
+  @@ignore
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view vw_accepted_pickups {
+  pickup_id      Int @default(0)
+  community_name Int @default(0)
+  courier_name   Int @default(0)
+  pickup_date    Int @default(0)
+  pickup_address Int @default(0)
+  pickup_status  Int @default(0)
+  dropbox_name   Int @default(0)
+
+  @@ignore
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view vw_community_profile {
+  community_id           Int @default(0)
+  community_name         Int @default(0)
+  email                  Int @default(0)
+  phone                  Int @default(0)
+  date_of_birth          Int @default(0)
+  address                Int @default(0)
+  photo                  Int @default(0)
+  is_verified            Int @default(0)
+  total_points_collected Int @default(0)
+  created_at             Int @default(0)
+  updated_at             Int @default(0)
+
+  @@ignore
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view vw_courier_profile {
+  courier_id     Int @default(0)
+  courier_name   Int @default(0)
+  email          Int @default(0)
+  phone          Int @default(0)
+  date_of_birth  Int @default(0)
+  address        Int @default(0)
+  account_number Int @default(0)
+  nik            Int @default(0)
+  ktp_url        Int @default(0)
+  kk_url         Int @default(0)
+  photo          Int @default(0)
+  is_verified    Int @default(0)
+  status         Int @default(0)
+  created_at     Int @default(0)
+  updated_at     Int @default(0)
+
+  @@ignore
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view vw_history_courier {
+  pickup_id        Int @default(0)
+  pickup_date      Int @default(0)
+  pickup_address   Int @default(0)
+  pickup_status    Int @default(0)
+  Drop_Box_Name    Int @default(0) @map("Drop Box Name")
+  district_address Int @default(0)
+  waste_type_names Int @default(0)
+  waste_name       Int @default(0)
+  total_quantity   Int @default(0)
+  total_points     Int @default(0)
+
+  @@ignore
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view vw_management_profile {
+  management_id   Int @default(0)
+  management_name Int @default(0)
+  email           Int @default(0)
+  phone           Int @default(0)
+  date_of_birth   Int @default(0)
+  address         Int @default(0)
+  photo           Int @default(0)
+  is_active       Int @default(0)
+  is_admin        Int @default(0)
+  created_at      Int @default(0)
+  updated_at      Int @default(0)
+
+  @@ignore
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view vw_pickup_requests {
+  pickup_id       Int @default(0)
+  community_name  Int @default(0)
+  pickup_date     Int @default(0)
+  pickup_address  Int @default(0)
+  pickup_status   Int @default(0)
+  dropbox_name    Int @default(0)
+  dropbox_address Int @default(0)
+
+  @@ignore
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view vw_pickup_tracking {
+  pickup_id      Int @default(0)
+  community_name Int @default(0)
+  courier_name   Int @default(0)
+  pickup_date    Int @default(0)
+  pickup_address Int @default(0)
+  pickup_status  Int @default(0)
+  dropbox_name   Int @default(0)
+  request_date   Int @default(0)
+  last_updated   Int @default(0)
+
+  @@ignore
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view vw_pickup_waste {
+  pickup_id         Int @default(0)
+  pickup_address    Int @default(0)
+  pickup_status     Int @default(0)
+  pickup_date       Int @default(0)
+  community_id      Int @default(0)
+  name              Int @default(0)
+  address           Int @default(0)
+  waste_id          Int @default(0)
+  waste_names       Int @default(0)
+  waste_image       Int @default(0)
+  waste_description Int @default(0)
+  waste_type_id     Int @default(0)
+  waste_type_names  Int @default(0)
+  waste_type_images Int @default(0)
+
+  @@ignore
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view vw_top_10_communities {
+  community_id   Int @default(0)
+  community_name Int @default(0)
+  total_pickups  Int @default(0)
+
+  @@ignore
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view vw_top_10_couriers {
+  courier_id    Int @default(0)
+  courier_name  Int @default(0)
+  total_pickups Int @default(0)
+
+  @@ignore
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view vw_top_10_waste_types {
+  waste_name      Int @default(0)
+  total_collected Int @default(0)
+
+  @@ignore
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view vw_total_waste_and_points {
+  total_waste_collected  Int @default(0)
+  total_points_collected Int @default(0)
+
+  @@ignore
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view vw_total_waste_points_per_category {
+  waste_type_name        Int @default(0)
+  total_waste_collected  Int @default(0)
+  total_points_collected Int @default(0)
+
+  @@ignore
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view vw_total_waste_points_per_district {
+  district_address       Int @default(0)
+  total_waste_collected  Int @default(0)
+  total_points_collected Int @default(0)
+
+  @@ignore
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view vw_total_waste_points_per_dropbox {
+  dropbox_name           Int @default(0)
+  total_waste_collected  Int @default(0)
+  total_points_collected Int @default(0)
+
+  @@ignore
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view vw_waste_type_category {
+  id          Int @default(0)
+  Name        Int @default(0)
+  Waste_Type  Int @default(0) @map("Waste Type")
+  Description Int @default(0)
+
+  @@ignore
+}
+
+enum dropbox_status {
+  Full
+  Available
+}
+
+enum dropbox_district_address {
+  Bandung_Utara           @map("Bandung Utara")
+  Bandung_Selatan         @map("Bandung Selatan")
+  Bandung_Timur           @map("Bandung Timur")
+  Bandung_Barat           @map("Bandung Barat")
+  Cimahi
+  Kabupaten_Bandung       @map("Kabupaten Bandung")
+  Kabupaten_Bandung_Barat @map("Kabupaten Bandung Barat")
+}
+
+enum courier_status {
+  Pending
+  Approved
+  Reject
 }
 
 enum waste_type_waste_type_name {

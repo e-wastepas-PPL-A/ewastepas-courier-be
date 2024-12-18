@@ -2,7 +2,7 @@ import 'dotenv/config';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import express from 'express';
-import cors from 'cors'; // Change here
+import cors from 'cors';
 import routes from './routes/index.js';
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
@@ -10,64 +10,159 @@ import wasteRoutes from './routes/wasteRoutes.js';
 import pickupRoutes from './routes/pickupRoutes.js';
 import dropboxRoutes from './routes/dropboxRoutes.js';
 import { logger } from "./utils/logger.js";
+import http from 'http';
 
 const app = express();
 
-// CORS configuration
+// CORS configuration with more robust settings
 const corsOptions = {
-    origin: '*',  // Allow requests from localhost:8000
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],  // Allow these HTTP methods
-    credentials: true,  // If your frontend needs to send credentials like cookies
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
+    optionsSuccessStatus: 200
 };
 
-app.use(cors(corsOptions));
+// Middleware to add correlation ID for tracing
+const addCorrelationId = (req, res, next) => {
+    const correlationId = req.headers['x-correlation-id'] || crypto.randomUUID();
+    req.correlationId = correlationId;
+    res.setHeader('X-Correlation-Id', correlationId);
+    next();
+};
 
-// Request parsing with limits
-app.use(express.json({ limit: '10kb' }));
+// Enhanced request logging middleware
+const requestLogger = (req, res, next) => {
+    const startTime = Date.now();
+
+    // Capture the original end function
+    const originalEnd = res.end;
+
+    // Override the end function to log response details
+    res.end = function(chunk, encoding) {
+        // Calculate response time
+        const responseTime = Date.now() - startTime;
+
+        // Log request and response details
+        logger.info({
+            message: 'HTTP Request',
+            method: req.method,
+            url: req.url,
+            correlationId: req.correlationId,
+            status: res.statusCode,
+            responseTime: `${responseTime}ms`,
+            requestBody: req.body && Object.keys(req.body).length > 0 ?
+                JSON.stringify(req.body) : 'No request body',
+            requestHeaders: JSON.stringify(req.headers)
+        });
+
+        // Call the original end function
+        originalEnd.call(this, chunk, encoding);
+    };
+
+    next();
+};
+
+// Apply middlewares
+app.use(cors(corsOptions));
+app.use(addCorrelationId);
+app.use(requestLogger);
+
+// Request parsing with limits and security
+app.use(express.json({
+    limit: '10kb',
+    verify: (req, res, buf) => {
+        try {
+            JSON.parse(buf.toString());
+        } catch (e) {
+            logger.warn({
+                message: 'Invalid JSON',
+                correlationId: req.correlationId,
+                error: e.message
+            });
+            throw new Error('Invalid JSON');
+        }
+    }
+}));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
 // Use routes
 app.use('/api', routes, wasteRoutes, pickupRoutes, dropboxRoutes, authRoutes, userRoutes);
 
-// Log incoming requests
-app.use((req, res, next) => {
-    logger.info(`Incoming request: ${req.method} ${req.url}`);
-    next();
-});
-
-// 404 handler
+// Static file serving
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 app.use('/', express.static(path.join(__dirname, '../')));
 
+// 404 handler
 app.use((req, res, next) => {
     const error = new Error('Hmm, looks like this page doesn\'t exist.');
     error.status = 404;
     next(error);
 });
 
-// Error handler
+// Comprehensive error handler
 app.use((error, req, res, next) => {
-    // Log error for monitoring
-    logger.error(`${error.message} - ${error.stack}`);
-
+    // Determine error details
     const status = error.status || 500;
-    const message = status === 500 ? 'Internal Server Error' : error.message;
-
-    res.status(status).json({
+    const errorResponse = {
         success: false,
         status,
-        message,
-        ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
+        message: status === 500 ? 'Internal Server Error' : error.message,
+        correlationId: req.correlationId
+    };
+
+    // Detailed error logging
+    logger.error({
+        message: 'Application Error',
+        correlationId: req.correlationId,
+        errorMessage: error.message,
+        errorStack: error.stack,
+        requestDetails: {
+            method: req.method,
+            url: req.url,
+            headers: req.headers,
+            body: req.body
+        }
     });
+
+    // Add stack trace in development
+    if (process.env.NODE_ENV === 'development') {
+        errorResponse.stack = error.stack;
+    }
+
+    res.status(status).json(errorResponse);
 });
+
+// Create HTTP server
+const server = http.createServer(app);
 
 // Graceful shutdown handler
-process.on('SIGTERM', () => {
-    logger.info('SIGTERM received. Shutting down gracefully...');
-    server.close(() => {
-        logger.info('Process terminated!');
-    });
-});
+const gracefulShutdown = () => {
+    logger.info('Received shutdown signal. Closing server...');
+    server.close((err) => {
+        if (err) {
+            logger.error({
+                message: 'Error during server shutdown',
+                error: err
+            });
+            process.exitCode = 1;
+        }
 
-export default app;
+        // Additional cleanup can be added here
+        logger.info('Server closed. Exiting process.');
+        process.exit();
+    });
+
+    // Force close server after 10 seconds
+    setTimeout(() => {
+        logger.warn('Could not close connections in time, forcefully shutting down');
+        process.exit(1);
+    }, 10000);
+};
+
+// Handle various termination signals
+process.on('SIGTERM', gracefulShutdown);
+process.on('SIGINT', gracefulShutdown);
+
+export { app, server };
