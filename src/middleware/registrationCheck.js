@@ -15,12 +15,12 @@ export const emailCheck = async (req, res, next) => {
         if(!courier.is_verified){
             try {
                 await sendOTPEmail(email);
-                return res.status(200).json({message: "OTP send to your email"})
+                return res.status(200).json({message: "OTP berhasil dikirim"})
             } catch (error) {
                 return res.status(500).json({error: error})
             }
         }
-        return res.status(409).json({error: "This email is already registered"})
+        return res.status(409).json({error: "Email ini sudah terdaftar"})
     }
     next()
 }

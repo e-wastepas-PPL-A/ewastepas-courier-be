@@ -1,6 +1,5 @@
 generator client {
-  provider        = "prisma-client-js"
-  previewFeatures = ["views"]
+  provider = "prisma-client-js"
 }
 
 datasource db {
@@ -26,6 +25,7 @@ model community {
   pickup_waste     pickup_waste[]
 }
 
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model community_points {
   points_id    Int        @id @default(autoincrement())
   community_id Int?
@@ -59,6 +59,7 @@ model courier {
   pickup_waste   pickup_waste[]
 }
 
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model dropbox {
   dropbox_id       Int                       @id @default(autoincrement())
   name             String                    @db.VarChar(50)
@@ -91,6 +92,7 @@ model management {
   pickup_waste  pickup_waste[]
 }
 
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model pickup_detail {
   pickup_id    Int?
@@ -100,8 +102,8 @@ model pickup_detail {
   pickup_waste pickup_waste? @relation(fields: [pickup_id], references: [pickup_id], map: "pickup_detail_ibfk_1")
   waste        waste?        @relation(fields: [waste_id], references: [waste_id], map: "pickup_detail_ibfk_2")
 
-  @@index([waste_id], map: "waste_id")
   @@index([pickup_id], map: "pickup_id")
+  @@index([waste_id], map: "waste_id")
   @@ignore
 }
 
@@ -121,8 +123,8 @@ model pickup_waste {
   pickup_detail  pickup_detail[]             @ignore
   dropbox        dropbox?                    @relation(fields: [dropbox_id], references: [dropbox_id], map: "pickup_waste_ibfk_1")
   courier        courier?                    @relation(fields: [courier_id], references: [courier_id], map: "pickup_waste_ibfk_2")
-  management     management?                 @relation(fields: [management_id], references: [management_id], map: "pickup_waste_ibfk_4")
-  community      community?                  @relation(fields: [community_id], references: [community_id], map: "pickup_waste_ibfk_3")
+  management     management?                 @relation(fields: [management_id], references: [management_id], map: "pickup_waste_ibfk_3")
+  community      community?                  @relation(fields: [community_id], references: [community_id], map: "pickup_waste_ibfk_4")
 
   @@index([community_id], map: "community_id")
   @@index([courier_id], map: "courier_id")
@@ -130,6 +132,7 @@ model pickup_waste {
   @@index([management_id], map: "management_id")
 }
 
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model waste {
   waste_id      Int             @id @default(autoincrement())
   waste_name    String          @db.VarChar(255)
@@ -153,6 +156,7 @@ model waste_type {
   updated_at      DateTime?                  @default(now()) @db.Timestamp(0)
   waste           waste[]
 }
+
 
 /// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 view view_dropbox_status {
@@ -417,9 +421,30 @@ enum waste_type_waste_type_name {
   Peralatan_elektronik_lainnya @map("Peralatan elektronik lainnya")
 }
 
+enum dropbox_district_address {
+  Bandung_Utara           @map("Bandung Utara")
+  Bandung_Selatan         @map("Bandung Selatan")
+  Bandung_Timur           @map("Bandung Timur")
+  Bandung_Barat           @map("Bandung Barat")
+  Cimahi
+  Kabupaten_Bandung       @map("Kabupaten Bandung")
+  Kabupaten_Bandung_Barat @map("Kabupaten Bandung Barat")
+}
+
 enum pickup_waste_pickup_status {
   requested
   accepted
   completed
   cancelled
+}
+
+enum dropbox_status {
+  Full
+  Available
+}
+
+enum courier_status {
+  Pending
+  Approved
+  Reject
 }
