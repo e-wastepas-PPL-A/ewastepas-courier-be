@@ -208,7 +208,7 @@ export const registration = async (req, res) => {
             data: {
                 email: email,
                 password: passwordHash,
-                name: name,
+                name: name
             }
         })
         

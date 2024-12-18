@@ -19,31 +19,37 @@ export const getUser = async (req, res) => {
 }
 
 export const updateUserData = async (req, res) => {
-    const {SERVER_URL} = process.env
-    const {name, address, nik, date_of_birth, phone_number, account_number} = req.body
+    const serverUrl = `${req.protocol}://${req.get('host')}`;
     const id_payload = req.payload.id
-    const photoPath = req.files?.foto ? SERVER_URL+req.files.photo[0].path.replace(/\\/g, '/') : null;
-    const ktpPath = req.files?.ktp ? SERVER_URL+req.files.ktp[0].path.replace(/\\/g, '/') : null;
-    const kkPath = req.files?.kk ? SERVER_URL+req.files.kk[0].path.replace(/\\/g, '/') : null;
+
+    const filterRequest = Object.keys(req.body).reduce((result, key) => {
+        if (req.body[key]) { 
+          result[key] = req.body[key];
+        }
+        return result;
+      }, {});
+
+    if(req.files){
+        if (req.files.ktp){
+            filterRequest.ktp_url = serverUrl+'/'+req.files.ktp[0].path.replace(/\\/g, '/')
+        }
+        if (req.files.kk){
+            filterRequest.kk_url = serverUrl+'/'+req.files.kk[0].path.replace(/\\/g, '/')
+        }
+        if (req.files.photo){
+            filterRequest.photo = serverUrl+'/'+req.files.photo[0].path.replace(/\\/g, '/')
+        }
+    }
 
     try {
         const updatedCourier = await prisma.courier.updateMany({
             where: {
                 courier_id: id_payload
             },
-            data: {
-                name: name,
-                address: address,
-                nik: nik,
-                date_of_birth: date_of_birth,
-                phone: phone_number,
-                account_number: account_number,
-                photo: photoPath,
-                ktp_url: ktpPath,
-                kk_url: kkPath
-            }
+            data: filterRequest
         })
-        res.status(200).json({message: 'Data successfully updated', data: updatedCourier})  
+        res.status(200).json({message: 'Data berhasil diperbarui', data: updatedCourier})
+
     } catch (error) {
         console.log(error);
         res.status(500).json({error: error}) 
@@ -56,11 +62,11 @@ export const changePassword = async (req, res) => {
     const {email} = req.payload
 
     if(!old_password || !new_password || !confirm_new_password) {
-        return res.status(400).json({error: 'Required fields are missing. Please complete all required fields.'})
+        return res.status(400).json({error: 'Lengkapi semua formulir isian!'})
     }
 
     if(new_password !== confirm_new_password){
-        return res.status(400).json({ error: 'Both passwords must be the same. Please check and re-enter.' })
+        return res.status(400).json({ error: 'Password yang anda masukan harus sama!' })
     }
 
     const courier = await prisma.courier.findUnique({
@@ -85,11 +91,11 @@ export const changePassword = async (req, res) => {
                     password: passwordHash
                 }
             })
-            res.status(200).json({message: 'Change password successfully.'})
+            res.status(200).json({message: 'Ubah password berhasil'})
         } catch (error) {
             console.log(error)
         }
     } else {
-        return res.status(500).json({message: 'Old password wrong'})
+        return res.status(500).json({message: 'Password lama salah'})
     }
 }
