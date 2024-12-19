@@ -154,26 +154,34 @@ class PickupService {
         return { day, week, month, year };
     }
 
-    static async updateStatus(pickupId, status, courierId, reason = null) {
+    static async updateStatus(pickupId, status, courierId, reason = '') {
         // Validate status
         if (!Object.values(PickupStatus).includes(status)) {
             throw ErrorTypes.VALIDATION_ERROR('Invalid pickup status');
         }
 
-        // Validate reason for rejection
+        // Validate reason for cancellation
         if (status === PickupStatus.CANCELLED && !reason) {
             throw ErrorTypes.VALIDATION_ERROR('Reason is required when rejecting a pickup');
+        }
+
+        // Prepare the update data
+        const updateData = {
+            pickup_status: status,
+            // Set reason to empty string by default instead of null
+            reason: status === PickupStatus.CANCELLED ? reason : '',
+        };
+
+        // Add courier_id if provided
+        if (courierId) {
+            updateData.courier_id = parseInt(courierId, 10);
         }
 
         return await prisma.pickup_waste.update({
             where: {
                 pickup_id: pickupId,
             },
-            data: {
-                pickup_status: status,
-                reason: status === PickupStatus.CANCELLED ? reason : null,
-                ...(courierId ? { courier_id: parseInt(courierId, 10) } : {}),
-            }
+            data: updateData
         });
     }
 }
