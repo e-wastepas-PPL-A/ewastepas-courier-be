@@ -76,9 +76,9 @@ const handleResponse = async (res, asyncFn) => {
 // Service layer for business logic
 class PickupService {
     static #STATUSES = [
-        { status: 'ACCEPTED', field: 'totalDelivered' },
-        { status: 'REQUESTED', field: 'totalOnDelivery' },
-        { status: 'COMPLETED', field: 'totalCompleted' },
+        { status: 'REQUESTED', field: 'totalRequested'},
+        { status: 'COMPLETED', field: 'totalDelivered' },
+        { status: 'ACCEPTED', field: 'totalOnDelivery' },
         { status: 'CANCELLED', field: 'totalCancelled' }
     ];
 
