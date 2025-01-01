@@ -96,6 +96,6 @@ export const changePassword = async (req, res) => {
             console.log(error)
         }
     } else {
-        return res.status(500).json({message: 'Password lama salah'})
+        return res.status(400).json({message: 'Password lama salah'})
     }
 }
