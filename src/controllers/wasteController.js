@@ -130,7 +130,6 @@ export const getWasteLists = asyncHandler(async (req, res) => {
     const where = search ? {
         waste_name: {
             contains: search,
-            mode: 'insensitive'
         }
     } : undefined;
 
@@ -171,7 +170,6 @@ export const findWasteName = asyncHandler(async (req, res) => {
         where: {
             waste_name: {
                 contains: name,
-                mode: 'insensitive'
             }
         },
         select: WASTE_SELECT,
