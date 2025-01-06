@@ -5,10 +5,11 @@ const DEFAULT_PAGE_SIZE = 10;
 const DEFAULT_PAGE = 1;
 
 const PickupStatus = {
-    ACCEPTED: 'accepted',
-    REQUESTED: 'requested',
-    CANCELLED: 'cancelled',
-    COMPLETED: 'completed'
+    REQUESTED: 'Menunggu_Penjemputan',
+    ACCEPTED: 'Dalam_Perjalanan',
+    COMPLETED: 'Sampah_telah_dijemput',
+    CANCELLED: 'Penjemputan_Gagal',
+    FINISHED: 'Pesanan_Selesai'
 };
 
 const SortableFields = {
@@ -68,10 +69,11 @@ const handleResponse = async (res, asyncFn) => {
 
 class PickupService {
     static #STATUSES = [
-        { status: 'REQUESTED', field: 'totalRequested' },
-        { status: 'COMPLETED', field: 'totalDelivered' },
-        { status: 'ACCEPTED', field: 'totalOnDelivery' },
-        { status: 'CANCELLED', field: 'totalCancelled' }
+        { status: PickupStatus.REQUESTED, field: 'totalRequested' },
+        { status: PickupStatus.ACCEPTED, field: 'totalOnDelivery' },
+        { status: PickupStatus.CANCELLED, field: 'totalCancelled' },
+        { status: PickupStatus.COMPLETED, field: 'totalDelivered' },
+        { status: PickupStatus.FINISHED, field: 'totalFinished' }
     ];
 
     static async calculateTotals(courierId, options = {}) {
@@ -109,7 +111,7 @@ class PickupService {
                 [field]: await prisma.pickup_waste.count({
                     where: {
                         courier_id: courierId,
-                        pickup_status: status.toLowerCase(),
+                        pickup_status: status,
                         created_at: { gte: startDate, lt: endDate }
                     }
                 })
