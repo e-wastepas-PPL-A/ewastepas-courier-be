@@ -1,16 +1,11 @@
 import { server } from './app.js';
-import { loadingAnimation } from "./utils/loadingAnimation.js";
 import { logger } from "./utils/logger.js";
-import http from 'http';
 
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
 
 const startServer = async () => {
     try {
-        // Optional loading animation
-        await loadingAnimation(500); // Adjust duration as needed
-
         // Start the server
         server.listen(PORT, HOST, () => {
             logger.info({
@@ -19,7 +14,7 @@ const startServer = async () => {
                 host: HOST,
                 environment: process.env.NODE_ENV || 'development',
                 url: `http://${HOST}:${PORT}`,
-                    timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString()
             });
         });
 
@@ -32,7 +27,6 @@ const startServer = async () => {
                     error: error.message,
                     timestamp: new Date().toISOString()
                 });
-                process.exit(1);
             } else {
                 logger.error({
                     message: 'Server Startup Error',
@@ -40,8 +34,8 @@ const startServer = async () => {
                     stack: error.stack,
                     timestamp: new Date().toISOString()
                 });
-                process.exit(1);
             }
+            process.exit(1);
         });
 
         // Health check and performance monitoring
@@ -65,6 +59,10 @@ const startServer = async () => {
         // Cleanup interval on server close
         server.on('close', () => {
             clearInterval(healthCheckInterval);
+            logger.info({
+                message: 'Server is shutting down',
+                timestamp: new Date().toISOString()
+            });
         });
 
     } catch (error) {
@@ -82,7 +80,8 @@ const startServer = async () => {
 process.on('unhandledRejection', (reason, promise) => {
     logger.error({
         message: 'Unhandled Promise Rejection',
-        reason: reason,
+        reason: reason instanceof Error ? reason.message : reason,
+        stack: reason instanceof Error ? reason.stack : undefined,
         timestamp: new Date().toISOString()
     });
 });
