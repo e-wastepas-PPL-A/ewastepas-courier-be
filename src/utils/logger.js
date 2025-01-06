@@ -35,7 +35,6 @@ export const logger = winston.createLogger({
         new winston.transports.File({ filename: 'logs/app.log' }),
         new LoggingWinston({
             projectId: 'dragon-breath-423920',
-            keyFilename: 'dragon-breath-423920.json'
         })
     ]
 });
