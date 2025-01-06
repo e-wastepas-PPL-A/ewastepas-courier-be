@@ -1,16 +1,15 @@
-import {prisma} from "../database.js";
-import {logger} from "../utils/logger.js";
+import { prisma } from '../database.js';
+import { logger } from '../utils/logger.js';
 
-// Constants
 const DEFAULT_PAGE_SIZE = 10;
 const DEFAULT_PAGE = 1;
 
-// Enums for better type safety and maintainability
 const PickupStatus = {
-    ACCEPTED: 'accepted',
-    REQUESTED: 'requested',
-    CANCELLED: 'cancelled',
-    COMPLETED: 'completed'
+    REQUESTED: 'Menunggu_Penjemputan',
+    ACCEPTED: 'Dalam_Perjalanan',
+    COMPLETED: 'Sampah_telah_dijemput',
+    CANCELLED: 'Penjemputan_Gagal',
+    FINISHED: 'Pesanan_Selesai'
 };
 
 const SortableFields = {
@@ -19,13 +18,11 @@ const SortableFields = {
     PICKUP_ADDRESS: 'pickup_address'
 };
 
-// Validation schemas
 const ValidationRules = {
     ALLOWED_SORT_FIELDS: Object.values(SortableFields),
     ALLOWED_SORT_ORDERS: ['asc', 'desc']
 };
 
-// Error definitions
 class AppError extends Error {
     constructor(status, message) {
         super(message);
@@ -41,12 +38,9 @@ const ErrorTypes = {
     VALIDATION_ERROR: (message) => new AppError(400, message)
 };
 
-// Utility functions
 const validateId = (id, type = 'pickup') => {
     const parsedId = parseInt(id, 10);
-    if (isNaN(parsedId)) {
-        throw ErrorTypes.INVALID_ID(type);
-    }
+    if (isNaN(parsedId)) throw ErrorTypes.INVALID_ID(type);
     return parsedId;
 };
 
@@ -73,23 +67,18 @@ const handleResponse = async (res, asyncFn) => {
     }
 };
 
-// Service layer for business logic
 class PickupService {
     static #STATUSES = [
-        { status: 'REQUESTED', field: 'totalRequested'},
-        { status: 'COMPLETED', field: 'totalDelivered' },
-        { status: 'ACCEPTED', field: 'totalOnDelivery' },
-        { status: 'CANCELLED', field: 'totalCancelled' }
+        { status: PickupStatus.REQUESTED, field: 'totalRequested' },
+        { status: PickupStatus.ACCEPTED, field: 'totalOnDelivery' },
+        { status: PickupStatus.CANCELLED, field: 'totalCancelled' },
+        { status: PickupStatus.COMPLETED, field: 'totalDelivered' },
+        { status: PickupStatus.FINISHED, field: 'totalFinished' }
     ];
 
     static async calculateTotals(courierId, options = {}) {
-        const {
-            timeFrame = 'day',
-            startDate: customStartDate,
-            endDate: customEndDate
-        } = options;
+        const { timeFrame = 'day', startDate: customStartDate, endDate: customEndDate } = options;
 
-        // Default time frame calculation if no custom dates provided
         let startDate = customStartDate;
         let endDate = customEndDate;
 
@@ -97,37 +86,33 @@ class PickupService {
             const now = new Date();
             switch (timeFrame) {
                 case 'day':
-                    startDate = startDate || new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                    endDate = endDate || new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+                    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                    endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
                     break;
                 case 'week':
-                    startDate = startDate || new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay());
-                    endDate = endDate || new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay() + 7);
+                    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay());
+                    endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay() + 7);
                     break;
                 case 'month':
-                    startDate = startDate || new Date(now.getFullYear(), now.getMonth(), 1);
-                    endDate = endDate || new Date(now.getFullYear(), now.getMonth() + 1, 1);
+                    startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                    endDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
                     break;
                 case 'year':
-                    startDate = startDate || new Date(now.getFullYear(), 0, 1);
-                    endDate = endDate || new Date(now.getFullYear() + 1, 0, 1);
+                    startDate = new Date(now.getFullYear(), 0, 1);
+                    endDate = new Date(now.getFullYear() + 1, 0, 1);
                     break;
                 default:
                     throw new Error('Invalid time frame');
             }
         }
 
-        // Use Promise.all for concurrent queries
         const totals = await Promise.all(
             this.#STATUSES.map(async ({ status, field }) => ({
                 [field]: await prisma.pickup_waste.count({
                     where: {
                         courier_id: courierId,
-                        pickup_status: status.toLowerCase(),
-                        created_at: {
-                            gte: startDate,
-                            lt: endDate
-                        }
+                        pickup_status: status,
+                        created_at: { gte: startDate, lt: endDate }
                     }
                 })
             }))
@@ -142,51 +127,76 @@ class PickupService {
     }
 
     static async getDetailedPickupTotals(courierId, options = {}) {
-        const baseOptions = { ...options };
-
         const [day, week, month, year] = await Promise.all([
-            this.calculateTotals(courierId, { ...baseOptions, timeFrame: 'day' }),
-            this.calculateTotals(courierId, { ...baseOptions, timeFrame: 'week' }),
-            this.calculateTotals(courierId, { ...baseOptions, timeFrame: 'month' }),
-            this.calculateTotals(courierId, { ...baseOptions, timeFrame: 'year' })
+            this.calculateTotals(courierId, { ...options, timeFrame: 'day' }),
+            this.calculateTotals(courierId, { ...options, timeFrame: 'week' }),
+            this.calculateTotals(courierId, { ...options, timeFrame: 'month' }),
+            this.calculateTotals(courierId, { ...options, timeFrame: 'year' })
         ]);
 
         return { day, week, month, year };
     }
 
     static async updateStatus(pickupId, status, courierId, reason = '') {
-        // Validate status
         if (!Object.values(PickupStatus).includes(status)) {
             throw ErrorTypes.VALIDATION_ERROR('Invalid pickup status');
         }
 
-        // Validate reason for cancellation
         if (status === PickupStatus.CANCELLED && !reason) {
             throw ErrorTypes.VALIDATION_ERROR('Reason is required when rejecting a pickup');
         }
 
-        // Prepare the update data
         const updateData = {
             pickup_status: status,
-            // Set reason to empty string by default instead of null
             reason: status === PickupStatus.CANCELLED ? reason : '',
         };
 
-        // Add courier_id if provided
         if (courierId) {
             updateData.courier_id = parseInt(courierId, 10);
         }
 
         return await prisma.pickup_waste.update({
-            where: {
-                pickup_id: pickupId,
-            },
+            where: { pickup_id: pickupId },
             data: updateData
         });
     }
+
+    static async getPickupById(pickupId) {
+        const pickup = await prisma.pickup_waste.findUnique({
+            where: { pickup_id: pickupId },
+            select: {
+                pickup_id: true,
+                pickup_date: true,
+                pickup_address: true,
+                pickup_status: true,
+                dropbox: { select: { name: true, address: true } },
+                community: { select: { name: true, phone: true } },
+                courier: { select: { name: true, email: true, phone: true } }
+            }
+        });
+
+        if (!pickup) {
+            throw ErrorTypes.NOT_FOUND('pickup');
+        }
+
+        // Fetch pickup details (waste items)
+        const pickupDetails = await prisma.$queryRaw`
+            SELECT pd.pickup_id, pd.quantity, w.waste_name
+            FROM pickup_detail pd
+            JOIN waste w ON pd.waste_id = w.waste_id
+            WHERE pd.pickup_id = ${pickupId}
+        `;
+
+        return {
+            ...pickup,
+            wasteDetails: pickupDetails.map(detail => ({
+                quantity: detail.quantity,
+                wasteName: detail.waste_name
+            }))
+        };
+    }
 }
 
-// Controller functions
 export const getAllPickupRequest = async (req, res) =>
     handleResponse(res, async () => {
         const {
@@ -200,8 +210,7 @@ export const getAllPickupRequest = async (req, res) =>
             limit = DEFAULT_PAGE_SIZE.toString()
         } = req.query;
 
-        const { sortBy: validatedSortBy, order: validatedOrder } =
-            validateSortParams(sortBy, order);
+        const { sortBy: validatedSortBy, order: validatedOrder } = validateSortParams(sortBy, order);
 
         const pagination = {
             skip: (parseInt(page, 10) - 1) * parseInt(limit, 10),
@@ -212,10 +221,7 @@ export const getAllPickupRequest = async (req, res) =>
             ...(status && { pickup_status: status }),
             ...(search && { pickup_address: { contains: search } }),
             ...(startDate && endDate && {
-                pickup_date: {
-                    gte: new Date(startDate),
-                    lte: new Date(endDate)
-                }
+                pickup_date: { gte: new Date(startDate), lte: new Date(endDate) }
             })
         };
 
@@ -229,53 +235,25 @@ export const getAllPickupRequest = async (req, res) =>
                     pickup_date: true,
                     pickup_address: true,
                     pickup_status: true,
-                    dropbox: {
-                        select: {
-                            name: true,
-                            address: true
-                        }
-                    },
-                    community: {
-                        select: {
-                            name: true,
-                            phone: true
-                        }
-                    },
-                    courier: {
-                        select: {
-                            name: true,
-                            email: true,
-                            phone: true
-                        }
-                    }
+                    dropbox: { select: { name: true, address: true } },
+                    community: { select: { name: true, phone: true } },
+                    courier: { select: { name: true, email: true, phone: true } }
                 }
             }),
             prisma.$queryRaw`
-                SELECT 
-                    pd.pickup_id, 
-                    pd.quantity, 
-                    w.waste_name
-                FROM 
-                    pickup_detail pd
-                JOIN 
-                    waste w ON pd.waste_id = w.waste_id
+                SELECT pd.pickup_id, pd.quantity, w.waste_name
+                FROM pickup_detail pd
+                         JOIN waste w ON pd.waste_id = w.waste_id
             `,
             prisma.pickup_waste.count({ where: filters })
         ]);
 
-        // Group pickup details by pickup_id
         const pickupDetailsMap = pickupDetails.reduce((acc, detail) => {
-            if (!acc[detail.pickup_id]) {
-                acc[detail.pickup_id] = [];
-            }
-            acc[detail.pickup_id].push({
-                quantity: detail.quantity,
-                wasteName: detail.waste_name
-            });
+            if (!acc[detail.pickup_id]) acc[detail.pickup_id] = [];
+            acc[detail.pickup_id].push({ quantity: detail.quantity, wasteName: detail.waste_name });
             return acc;
         }, {});
 
-        // Merge pickup details with pickup waste data
         const transformedData = historyData.map(pickup => ({
             ...pickup,
             wasteDetails: pickupDetailsMap[pickup.pickup_id] || []
@@ -321,83 +299,43 @@ export const updatePickupStatusToCompleted = (req, res) =>
 export const getCalculatePickupTotals = async (req, res) =>
     handleResponse(res, async () => {
         const courierId = validateId(req.params.id, 'courier');
-        const {
-            timePeriod,
-            startDate,
-            endDate
-        } = req.query;
+        const { timePeriod, startDate, endDate } = req.query;
 
-        // Validate input
         const options = {};
 
         if (timePeriod) {
             if (!['day', 'week', 'month', 'year'].includes(timePeriod)) {
-                throw new BadRequestError('Invalid time period. Must be day, week, month, or year.');
+                throw new Error('Invalid time period. Must be day, week, month, or year.');
             }
             options.timeFrame = timePeriod;
         }
 
-        // Parse and validate dates if provided
         if (startDate) {
             const parsedStartDate = new Date(startDate);
-            if (isNaN(parsedStartDate.getTime())) {
-                throw new BadRequestError('Invalid start date format');
-            }
+            if (isNaN(parsedStartDate.getTime())) throw new Error('Invalid start date format');
             options.startDate = parsedStartDate;
         }
 
         if (endDate) {
             const parsedEndDate = new Date(endDate);
-            if (isNaN(parsedEndDate.getTime())) {
-                throw new BadRequestError('Invalid end date format');
-            }
+            if (isNaN(parsedEndDate.getTime())) throw new Error('Invalid end date format');
             options.endDate = parsedEndDate;
         }
 
-        // Validate date range if both provided
         if (options.startDate && options.endDate && options.startDate >= options.endDate) {
-            throw new BadRequestError('Start date must be before end date');
+            throw new Error('Start date must be before end date');
         }
 
-        try {
-            const totals = timePeriod
-                ? await PickupService.calculateTotals(courierId, options)
-                : await PickupService.getDetailedPickupTotals(courierId, options);
+        const totals = timePeriod
+            ? await PickupService.calculateTotals(courierId, options)
+            : await PickupService.getDetailedPickupTotals(courierId, options);
 
-            // Logging with additional context
-            logger.info('Pickup totals calculated', {
-                context: {
-                    courierId,
-                    timePeriod: timePeriod || 'all periods',
-                    dateRange: {
-                        start: options.startDate,
-                        end: options.endDate
-                    },
-                    totalCount: Object.values(totals).reduce((sum, period) =>
-                        sum + (period.totalDelivered || 0) +
-                        (period.totalOnDelivery || 0) +
-                        (period.totalCompleted || 0) +
-                        (period.totalCancelled || 0), 0)
-                },
-                totals
-            });
+        logger.info('Pickup totals calculated', {
+            context: { courierId, timePeriod: timePeriod || 'all periods', dateRange: { start: options.startDate, end: options.endDate } },
+            totals
+        });
 
-            return { totals };
-        } catch (error) {
-            logger.error('Failed to calculate pickup totals', {
-                error: {
-                    message: error.message,
-                    name: error.name,
-                    courierId,
-                    timePeriod,
-                    startDate,
-                    endDate
-                },
-                stack: error.stack
-            });
-
-            throw error;
-        }
+        return { totals };
     });
 
 export const getPickupHistoryByCourier = async (req, res) =>
@@ -414,8 +352,7 @@ export const getPickupHistoryByCourier = async (req, res) =>
             limit = DEFAULT_PAGE_SIZE.toString()
         } = req.query;
 
-        const { sortBy: validatedSortBy, order: validatedOrder } =
-            validateSortParams(sortBy, order);
+        const { sortBy: validatedSortBy, order: validatedOrder } = validateSortParams(sortBy, order);
 
         const pagination = {
             skip: (parseInt(page, 10) - 1) * parseInt(limit, 10),
@@ -427,10 +364,7 @@ export const getPickupHistoryByCourier = async (req, res) =>
             ...(status && { pickup_status: status }),
             ...(search && { pickup_address: { contains: search } }),
             ...(startDate && endDate && {
-                pickup_date: {
-                    gte: new Date(startDate),
-                    lte: new Date(endDate)
-                }
+                pickup_date: { gte: new Date(startDate), lte: new Date(endDate) }
             })
         };
 
@@ -444,53 +378,25 @@ export const getPickupHistoryByCourier = async (req, res) =>
                     pickup_date: true,
                     pickup_address: true,
                     pickup_status: true,
-                    dropbox: {
-                        select: {
-                            name: true,
-                            address: true
-                        }
-                    },
-                    community: {
-                        select: {
-                            name: true,
-                            phone: true
-                        }
-                    },
-                    courier: {
-                        select: {
-                            name: true,
-                            email: true,
-                            phone: true
-                        }
-                    }
+                    dropbox: { select: { name: true, address: true } },
+                    community: { select: { name: true, phone: true } },
+                    courier: { select: { name: true, email: true, phone: true } }
                 }
             }),
             prisma.$queryRaw`
-                SELECT 
-                    pd.pickup_id, 
-                    pd.quantity, 
-                    w.waste_name
-                FROM 
-                    pickup_detail pd
-                JOIN 
-                    waste w ON pd.waste_id = w.waste_id
+                SELECT pd.pickup_id, pd.quantity, w.waste_name
+                FROM pickup_detail pd
+                         JOIN waste w ON pd.waste_id = w.waste_id
             `,
             prisma.pickup_waste.count({ where: filters })
         ]);
 
-        // Group pickup details by pickup_id
         const pickupDetailsMap = pickupDetails.reduce((acc, detail) => {
-            if (!acc[detail.pickup_id]) {
-                acc[detail.pickup_id] = [];
-            }
-            acc[detail.pickup_id].push({
-                quantity: detail.quantity,
-                wasteName: detail.waste_name
-            });
+            if (!acc[detail.pickup_id]) acc[detail.pickup_id] = [];
+            acc[detail.pickup_id].push({ quantity: detail.quantity, wasteName: detail.waste_name });
             return acc;
         }, {});
 
-        // Merge pickup details with pickup waste data
         const transformedData = historyData.map(pickup => ({
             ...pickup,
             wasteDetails: pickupDetailsMap[pickup.pickup_id] || []

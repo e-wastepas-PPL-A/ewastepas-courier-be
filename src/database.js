@@ -20,9 +20,8 @@ const createPrismaClient = () => {
     // Enhanced logging with correlation ID and more detailed tracing
     prisma.$on('query', (e) => {
         const correlationId = crypto.randomUUID(); // Generate a unique trace ID
-        logger.info({
-            message: 'Database Query Execution',
-            correlationId: correlationId,
+        logger.info('Database Query Execution', {
+            correlationId,
             query: e.query,
             params: e.params,
             duration: `${e.duration}ms`,
@@ -32,29 +31,44 @@ const createPrismaClient = () => {
 
     prisma.$on('error', (e) => {
         const correlationId = crypto.randomUUID(); // Generate a unique trace ID
-        logger.error({
-            message: 'Prisma Database Error',
-            correlationId: correlationId,
+        logger.error('Prisma Database Error', {
+            correlationId,
             errorMessage: e.message,
             timestamp: new Date().toISOString(),
-            // Optionally add more context like stack trace
-            stack: e.stack
+            stack: e.stack // Include stack trace for debugging
+        });
+    });
+
+    prisma.$on('info', (e) => {
+        const correlationId = crypto.randomUUID(); // Generate a unique trace ID
+        logger.info('Prisma Database Info', {
+            correlationId,
+            message: e.message,
+            timestamp: new Date().toISOString()
+        });
+    });
+
+    prisma.$on('warn', (e) => {
+        const correlationId = crypto.randomUUID(); // Generate a unique trace ID
+        logger.warn('Prisma Database Warning', {
+            correlationId,
+            message: e.message,
+            timestamp: new Date().toISOString()
         });
     });
 
     // Add connection lifecycle logging
     prisma.$connect()
         .then(() => {
-            logger.info({
-                message: 'Prisma Database Connection Established',
+            logger.info('Prisma Database Connection Established', {
                 timestamp: new Date().toISOString()
             });
         })
         .catch((error) => {
-            logger.error({
-                message: 'Failed to Connect to Database',
+            logger.error('Failed to Connect to Database', {
                 error: error.message,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
+                stack: error.stack // Include stack trace for debugging
             });
         });
 
@@ -66,12 +80,12 @@ export const prisma = createPrismaClient();
 // Global error handler for unhandled database connection issues
 process.on('unhandledRejection', (reason, promise) => {
     const correlationId = crypto.randomUUID(); // Generate a unique trace ID
-    logger.error({
-        message: 'Unhandled Rejection at Database Connection',
-        correlationId: correlationId,
-        reason: reason,
+    logger.error('Unhandled Rejection at Database Connection', {
+        correlationId,
+        reason: reason instanceof Error ? reason.message : reason,
         promise: promise,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        stack: reason instanceof Error ? reason.stack : undefined // Include stack trace if available
     });
 });
 
@@ -79,16 +93,15 @@ process.on('unhandledRejection', (reason, promise) => {
 process.on('SIGINT', async () => {
     try {
         await prisma.$disconnect();
-        logger.info({
-            message: 'Prisma Database Connection Gracefully Disconnected',
+        logger.info('Prisma Database Connection Gracefully Disconnected', {
             timestamp: new Date().toISOString()
         });
         process.exit(0);
     } catch (error) {
-        logger.error({
-            message: 'Error during database disconnection',
+        logger.error('Error during database disconnection', {
             error: error.message,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            stack: error.stack // Include stack trace for debugging
         });
         process.exit(1);
     }

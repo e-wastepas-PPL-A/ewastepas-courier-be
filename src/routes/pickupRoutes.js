@@ -5,7 +5,8 @@ import {
     getPickupRequestById,
     getPickupHistoryByCourier,
     getCalculatePickupTotals,
-    updatePickupStatusToCancelled, updatePickupStatusToCompleted
+    updatePickupStatusToCancelled,
+    updatePickupStatusToCompleted,
 } from '../controllers/pickupController.js';
 
 // Input validation middleware
@@ -44,51 +45,45 @@ const validatePickupHistoryQuery = (req, res, next) => {
 
 const router = express.Router();
 
-// Group routes by resource and action
 // Pickup requests
-router.get(
-    '/pickup',
-    getAllPickupRequest
-);
+router
+    .route('/pickup')
+    .get(getAllPickupRequest);
 
-router.get(
-    '/pickup/:id',
-    validateIdParam,
-    getPickupRequestById
-);
+router
+    .route('/pickup/:id')
+    .get(validateIdParam, getPickupRequestById);
 
 // Status updates
-router.patch(
-    '/pickup/:id/accept',
-    validateIdParam,
-    updatePickupStatusToAccepted
-);
+router
+    .route('/pickup/:id/accept')
+    .patch(validateIdParam, updatePickupStatusToAccepted);
 
-router.patch(
-    '/pickup/:id/cancel',
-    validateIdParam,
-    updatePickupStatusToCancelled
-);
+router
+    .route('/pickup/:id/cancel')
+    .patch(validateIdParam, updatePickupStatusToCancelled);
 
-router.patch(
-    '/pickup/:id/complete',
-    validateIdParam,
-    updatePickupStatusToCompleted
-);
+router
+    .route('/pickup/:id/complete')
+    .patch(validateIdParam, updatePickupStatusToCompleted);
 
 // Courier-specific routes
-router.get(
-    '/pickup/courier/history',
-    validatePickupHistoryQuery,
-    getPickupHistoryByCourier
-);
+router
+    .route('/pickup/courier/history')
+    .get(validatePickupHistoryQuery, getPickupHistoryByCourier);
 
-router.get(
-    '/pickup/courier/:id/totals',
-    [
-        validateIdParam,
-    ],
-    getCalculatePickupTotals
-);
+router
+    .route('/pickup/courier/:id/totals')
+    .get(validateIdParam, getCalculatePickupTotals);
+
+// Error handling middleware (must be placed after all routes)
+router.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).json({
+        success: false,
+        message: 'Something went wrong!',
+        error: process.env.NODE_ENV === 'development' ? err.message : undefined,
+    });
+});
 
 export default router;

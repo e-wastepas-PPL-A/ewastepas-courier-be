@@ -4,7 +4,8 @@ import {
     getWasteById,
     getAllWasteTypes,
     getWasteLists,
-    withCache
+    withCache,
+    getWasteTypeById,
 } from '../controllers/wasteController.js';
 
 const router = express.Router();
@@ -16,14 +17,14 @@ const validatePaginationQuery = (req, res, next) => {
     if (page && (!Number.isInteger(+page) || +page < 1)) {
         return res.status(400).json({
             success: false,
-            message: 'Invalid page number. Must be a positive integer.'
+            message: 'Invalid page number. Must be a positive integer.',
         });
     }
 
     if (limit && (!Number.isInteger(+limit) || +limit < 1 || +limit > 100)) {
         return res.status(400).json({
             success: false,
-            message: 'Invalid limit. Must be between 1 and 100.'
+            message: 'Invalid limit. Must be between 1 and 100.',
         });
     }
 
@@ -36,7 +37,7 @@ const validateSearchQuery = (req, res, next) => {
     if (!name || name.trim().length < 2) {
         return res.status(400).json({
             success: false,
-            message: 'Search query must be at least 2 characters long.'
+            message: 'Search query must be at least 2 characters long.',
         });
     }
 
@@ -51,46 +52,43 @@ const validateIdParam = (req, res, next) => {
     if (!Number.isInteger(+id) || +id < 1) {
         return res.status(400).json({
             success: false,
-            message: 'Invalid ID. Must be a positive integer.'
+            message: 'Invalid ID. Must be a positive integer.',
         });
     }
 
     next();
 };
 
-// Group routes and apply middleware
-router.route('/waste')
-    .get(
-        validatePaginationQuery,
-        withCache('waste'),
-        getWasteLists
-    );
+// Waste-related routes
+router
+    .route('/waste')
+    .get(validatePaginationQuery, withCache('waste'), getWasteLists);
 
-router.route('/waste/search')
-    .get(
-        validateSearchQuery,
-        findWasteName
-    );
+router
+    .route('/waste/search')
+    .get(validateSearchQuery, findWasteName);
 
-router.route('/waste/types')
-    .get(
-        withCache('waste-types', 3600),
-        getAllWasteTypes
-    );
+router
+    .route('/waste/types')
+    .get(withCache('waste-types', 3600), getAllWasteTypes);
 
-router.route('/waste/:id')
-    .get(
-        validateIdParam,
-        getWasteById
-    );
+// Define the more specific route first
+router
+    .route('/waste/:id/details')
+    .get(validateIdParam, getWasteById);
 
-// Error handling middleware
+// Define the less specific route after
+router
+    .route('/waste/:id')
+    .get(validateIdParam, getWasteTypeById);
+
+// Error handling middleware (must be placed after all routes)
 router.use((err, req, res, next) => {
     console.error(err.stack);
     res.status(500).json({
         success: false,
         message: 'Something went wrong!',
-        error: process.env.NODE_ENV === 'development' ? err.message : undefined
+        error: process.env.NODE_ENV === 'development' ? err.message : undefined,
     });
 });
 
