@@ -22,6 +22,7 @@ model community {
   otp_expiry       DateTime?          @db.Timestamp(0)
   created_at       DateTime?          @default(now()) @db.Timestamp(0)
   updated_at       DateTime?          @default(now()) @db.Timestamp(0)
+  cart             cart[]
   community_points community_points[]
   pickup_waste     pickup_waste[]
 }
@@ -93,15 +94,18 @@ model management {
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model pickup_detail {
-  pickup_id    Int?
-  waste_id     Int?
-  quantity     Int?          @default(0)
-  points       Int?          @default(0)
-  pickup_waste pickup_waste? @relation(fields: [pickup_id], references: [pickup_id], map: "pickup_detail_ibfk_1")
-  waste        waste?        @relation(fields: [waste_id], references: [waste_id], map: "pickup_detail_ibfk_2")
+  pickup_id     Int?
+  waste_id      Int?
+  quantity      Int?          @default(0)
+  points        Int?          @default(0)
+  waste_type_id Int?
+  waste_type    waste_type?   @relation(fields: [waste_type_id], references: [waste_type_id], map: "pickup_detail_fk")
+  pickup_waste  pickup_waste? @relation(fields: [pickup_id], references: [pickup_id], map: "pickup_detail_ibfk_1")
+  waste         waste?        @relation(fields: [waste_id], references: [waste_id], map: "pickup_detail_ibfk_2")
 
   @@index([waste_id], map: "waste_id")
   @@index([pickup_id], map: "pickup_id")
+  @@index([waste_type_id], map: "waste_type_id")
   @@ignore
 }
 
@@ -110,7 +114,7 @@ model pickup_waste {
   pickup_date    DateTime                    @db.Date
   pickup_time    DateTime                    @db.Time(0)
   pickup_address String                      @db.VarChar(255)
-  pickup_status  pickup_waste_pickup_status? @default(requested)
+  pickup_status  pickup_waste_pickup_status? @default(Menunggu_Penjemputan)
   dropbox_id     Int?
   courier_id     Int?
   community_id   Int?
@@ -118,6 +122,7 @@ model pickup_waste {
   reason         String                      @db.Text
   created_at     DateTime?                   @default(now()) @db.Timestamp(0)
   updated_at     DateTime?                   @default(now()) @db.Timestamp(0)
+  cart           cart[]
   pickup_detail  pickup_detail[]             @ignore
   dropbox        dropbox?                    @relation(fields: [dropbox_id], references: [dropbox_id], map: "pickup_waste_ibfk_1")
   courier        courier?                    @relation(fields: [courier_id], references: [courier_id], map: "pickup_waste_ibfk_2")
@@ -139,6 +144,8 @@ model waste {
   description   String?         @db.Text
   created_at    DateTime?       @default(now()) @db.Timestamp(0)
   updated_at    DateTime?       @default(now()) @db.Timestamp(0)
+  cart          cart[]
+  cart_detail   cart_detail[]
   pickup_detail pickup_detail[] @ignore
   waste_type    waste_type?     @relation(fields: [waste_type_id], references: [waste_type_id], onDelete: Cascade, map: "waste_ibfk_1")
 
@@ -151,7 +158,313 @@ model waste_type {
   image           String?                    @db.VarChar(255)
   created_at      DateTime?                  @default(now()) @db.Timestamp(0)
   updated_at      DateTime?                  @default(now()) @db.Timestamp(0)
+  pickup_detail   pickup_detail[]            @ignore
   waste           waste[]
+}
+
+model cart {
+  cart_id       Int                @id @default(autoincrement())
+  id_community  Int?
+  id_waste      Int?
+  id_pickup     Int?
+  pickup_status cart_pickup_status
+  created_at    DateTime?          @default(now()) @db.Timestamp(0)
+  updated_at    DateTime?          @default(now()) @db.Timestamp(0)
+  community     community?         @relation(fields: [id_community], references: [community_id], onDelete: NoAction, onUpdate: NoAction, map: "cart_ibfk_1")
+  waste         waste?             @relation(fields: [id_waste], references: [waste_id], onDelete: NoAction, onUpdate: NoAction, map: "cart_ibfk_2")
+  pickup_waste  pickup_waste?      @relation(fields: [id_pickup], references: [pickup_id], onDelete: NoAction, onUpdate: NoAction, map: "cart_ibfk_3")
+  cart_detail   cart_detail[]
+
+  @@index([id_community], map: "id_community")
+  @@index([id_pickup], map: "id_pickup")
+  @@index([id_waste], map: "id_waste")
+}
+
+model cart_detail {
+  cart_detail_id Int       @id @default(autoincrement())
+  cart_id        Int
+  waste_id       Int
+  quantity       Int
+  points         Int
+  created_at     DateTime? @default(now()) @db.Timestamp(0)
+  updated_at     DateTime? @default(now()) @db.Timestamp(0)
+  cart           cart      @relation(fields: [cart_id], references: [cart_id], onDelete: NoAction, onUpdate: NoAction, map: "cart_detail_ibfk_1")
+  waste          waste     @relation(fields: [waste_id], references: [waste_id], onDelete: NoAction, onUpdate: NoAction, map: "cart_detail_ibfk_2")
+
+  @@index([cart_id], map: "cart_id")
+  @@index([waste_id], map: "waste_id")
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view view_dropbox_status {
+  dropbox_id       Int                                   @default(0)
+  dropbox_name     String                                @db.VarChar(50)
+  address          String                                @db.VarChar(255)
+  district_address view_dropbox_status_district_address?
+  capacity         Int?                                  @default(0)
+  status           view_dropbox_status_status?           @default(Available)
+  capacity_status  String                                @default("") @db.VarChar(9)
+  created_at       DateTime?                             @default(now()) @db.Timestamp(0)
+  updated_at       DateTime?                             @default(now()) @db.Timestamp(0)
+
+  @@ignore
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view view_total_pickup_history {
+  pickup_id        Int                                         @default(0)
+  pickup_date      DateTime                                    @db.Date
+  pickup_address   String                                      @db.VarChar(255)
+  pickup_status    view_total_pickup_history_pickup_status?    @default(Menunggu_Penjemputan)
+  Drop_Box_Name    String                                      @map("Drop Box Name") @db.VarChar(50)
+  district_address view_total_pickup_history_district_address?
+  waste_type_name  view_total_pickup_history_waste_type_name
+  total_quantity   Decimal?                                    @db.Decimal(32, 0)
+  total_points     Decimal?                                    @db.Decimal(32, 0)
+
+  @@ignore
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view vw_accepted_pickups {
+  pickup_id      Int                                @default(0)
+  community_name String                             @db.VarChar(50)
+  courier_name   String                             @db.VarChar(50)
+  pickup_date    DateTime                           @db.Date
+  pickup_address String                             @db.VarChar(255)
+  pickup_status  vw_accepted_pickups_pickup_status? @default(Menunggu_Penjemputan)
+  dropbox_name   String?                            @db.VarChar(50)
+
+  @@ignore
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view vw_community_profile {
+  community_id           Int       @default(0)
+  community_name         String    @db.VarChar(50)
+  email                  String    @db.VarChar(50)
+  phone                  String?   @db.VarChar(255)
+  date_of_birth          DateTime? @db.Date
+  address                String?   @db.VarChar(255)
+  photo                  String?   @db.VarChar(255)
+  is_verified            Boolean?  @default(false)
+  total_points_collected BigInt    @default(0)
+  created_at             DateTime? @default(now()) @db.Timestamp(0)
+  updated_at             DateTime? @default(now()) @db.Timestamp(0)
+
+  @@ignore
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view vw_courier_profile {
+  courier_id     Int                        @default(0)
+  courier_name   String                     @db.VarChar(50)
+  email          String                     @db.VarChar(50)
+  phone          String?                    @db.VarChar(15)
+  date_of_birth  DateTime?                  @db.Date
+  address        String?                    @db.VarChar(255)
+  account_number String?                    @db.VarChar(50)
+  nik            String?                    @db.VarChar(16)
+  ktp_url        String?                    @db.VarChar(255)
+  kk_url         String?                    @db.VarChar(255)
+  photo          String?                    @db.VarChar(255)
+  is_verified    Boolean?                   @default(false)
+  status         vw_courier_profile_status? @default(Pending)
+  created_at     DateTime?                  @default(now()) @db.Timestamp(0)
+  updated_at     DateTime?                  @default(now()) @db.Timestamp(0)
+
+  @@ignore
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view vw_ftr_history_done {
+  pickup_id     Int?
+  waste_name    String                             @db.VarChar(255)
+  quantity      Int?                               @default(0)
+  point         Int?                               @default(0)
+  pickup_date   DateTime                           @db.Date
+  pickup_status vw_ftr_history_done_pickup_status? @default(Menunggu_Penjemputan)
+  total_points  Decimal?                           @db.Decimal(42, 0)
+
+  @@ignore
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view vw_ftr_history_reject {
+  pickup_id     Int?
+  waste_name    String                               @db.VarChar(255)
+  quantity      Int?                                 @default(0)
+  point         Int?                                 @default(0)
+  pickup_date   DateTime                             @db.Date
+  pickup_status vw_ftr_history_reject_pickup_status? @default(Menunggu_Penjemputan)
+  total_points  Decimal?                             @db.Decimal(42, 0)
+
+  @@ignore
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view vw_ftr_ongoing {
+  pickup_id     Int?
+  waste_name    String                        @db.VarChar(255)
+  quantity      Int?                          @default(0)
+  point         Int?                          @default(0)
+  pickup_date   DateTime                      @db.Date
+  pickup_status vw_ftr_ongoing_pickup_status? @default(Menunggu_Penjemputan)
+  total_points  Decimal?                      @db.Decimal(42, 0)
+
+  @@ignore
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view vw_history_courier {
+  pickup_id        Int                                  @default(0)
+  pickup_date      DateTime                             @db.Date
+  pickup_address   String                               @db.VarChar(255)
+  pickup_status    vw_history_courier_pickup_status?    @default(Menunggu_Penjemputan)
+  Drop_Box_Name    String                               @map("Drop Box Name") @db.VarChar(50)
+  district_address vw_history_courier_district_address?
+  waste_type_names String?                              @db.Text
+  waste_name       String?                              @db.Text
+  total_quantity   String?                              @db.Text
+  total_points     String?                              @db.Text
+
+  @@ignore
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view vw_management_profile {
+  management_id   Int       @default(0)
+  management_name String    @db.VarChar(50)
+  email           String    @db.VarChar(50)
+  phone           String    @db.VarChar(15)
+  date_of_birth   DateTime? @db.Date
+  address         String?   @db.VarChar(255)
+  photo           String?   @db.VarChar(255)
+  is_active       String    @default("") @db.VarChar(3)
+  is_admin        String    @default("") @db.VarChar(3)
+  created_at      DateTime? @default(now()) @db.Timestamp(0)
+  updated_at      DateTime? @default(now()) @db.Timestamp(0)
+
+  @@ignore
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view vw_pickup_requests {
+  pickup_id       Int                               @default(0)
+  community_name  String                            @db.VarChar(50)
+  pickup_date     DateTime                          @db.Date
+  pickup_address  String                            @db.VarChar(255)
+  pickup_status   vw_pickup_requests_pickup_status? @default(Menunggu_Penjemputan)
+  dropbox_name    String?                           @db.VarChar(50)
+  dropbox_address String?                           @db.VarChar(255)
+
+  @@ignore
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view vw_pickup_tracking {
+  pickup_id      Int                               @default(0)
+  community_name String                            @db.VarChar(50)
+  courier_name   String?                           @db.VarChar(50)
+  pickup_date    DateTime                          @db.Date
+  pickup_address String                            @db.VarChar(255)
+  pickup_status  vw_pickup_tracking_pickup_status? @default(Menunggu_Penjemputan)
+  dropbox_name   String?                           @db.VarChar(50)
+  request_date   DateTime?                         @default(now()) @db.Timestamp(0)
+  last_updated   DateTime?                         @default(now()) @db.Timestamp(0)
+
+  @@ignore
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view vw_pickup_waste {
+  pickup_id         Int                            @default(0)
+  pickup_address    String                         @db.VarChar(255)
+  pickup_status     vw_pickup_waste_pickup_status? @default(Menunggu_Penjemputan)
+  pickup_date       DateTime                       @db.Date
+  community_id      Int                            @default(0)
+  name              String                         @db.VarChar(50)
+  address           String?                        @db.VarChar(255)
+  waste_id          String?                        @db.Text
+  waste_names       String?                        @db.Text
+  waste_image       String?                        @db.Text
+  waste_description String?                        @db.Text
+  waste_type_id     String?                        @db.Text
+  waste_type_names  String?                        @db.Text
+  waste_type_images String?                        @db.Text
+
+  @@ignore
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view vw_top_10_communities {
+  community_id   Int    @default(0)
+  community_name String @db.VarChar(50)
+  total_pickups  BigInt @default(0)
+
+  @@ignore
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view vw_top_10_couriers {
+  courier_id    Int    @default(0)
+  courier_name  String @db.VarChar(50)
+  total_pickups BigInt @default(0)
+
+  @@ignore
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view vw_top_10_waste_types {
+  waste_name      String  @db.VarChar(255)
+  total_collected Decimal @default(0) @db.Decimal(32, 0)
+
+  @@ignore
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view vw_total_waste_and_points {
+  total_waste_collected  Decimal? @db.Decimal(32, 0)
+  total_points_collected Decimal? @db.Decimal(32, 0)
+
+  @@ignore
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view vw_total_waste_points_per_category {
+  waste_type_name        vw_total_waste_points_per_category_waste_type_name
+  total_waste_collected  Decimal                                            @default(0) @db.Decimal(32, 0)
+  total_points_collected Decimal                                            @default(0) @db.Decimal(32, 0)
+
+  @@ignore
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view vw_total_waste_points_per_district {
+  district_address       vw_total_waste_points_per_district_district_address?
+  total_waste_collected  Decimal                                              @default(0) @db.Decimal(32, 0)
+  total_points_collected Decimal                                              @default(0) @db.Decimal(32, 0)
+
+  @@ignore
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view vw_total_waste_points_per_dropbox {
+  dropbox_name           String  @db.VarChar(50)
+  total_waste_collected  Decimal @default(0) @db.Decimal(32, 0)
+  total_points_collected Decimal @default(0) @db.Decimal(32, 0)
+
+  @@ignore
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view vw_waste_type_category {
+  id          Int                               @default(0)
+  Name        String                            @db.VarChar(255)
+  Waste_Type  vw_waste_type_category_Waste_Type @map("Waste Type")
+  Description String?                           @db.Text
+
+  @@ignore
 }
 
 enum dropbox_status {
@@ -184,9 +497,170 @@ enum waste_type_waste_type_name {
   Peralatan_elektronik_lainnya @map("Peralatan elektronik lainnya")
 }
 
+enum vw_total_waste_points_per_category_waste_type_name {
+  Peralatan_rumah_tangga_besar @map("Peralatan rumah tangga besar")
+  Peralatan_rumah_tangga_kecil @map("Peralatan rumah tangga kecil")
+  Peralatan_IT                 @map("Peralatan IT")
+  Lampu
+  Mainan
+  Peralatan_elektronik_lainnya @map("Peralatan elektronik lainnya")
+}
+
+enum vw_total_waste_points_per_district_district_address {
+  Bandung_Utara           @map("Bandung Utara")
+  Bandung_Selatan         @map("Bandung Selatan")
+  Bandung_Timur           @map("Bandung Timur")
+  Bandung_Barat           @map("Bandung Barat")
+  Cimahi
+  Kabupaten_Bandung       @map("Kabupaten Bandung")
+  Kabupaten_Bandung_Barat @map("Kabupaten Bandung Barat")
+}
+
+enum vw_pickup_waste_pickup_status {
+  Menunggu_Penjemputan  @map("Menunggu Penjemputan")
+  Dalam_Perjalanan      @map("Dalam Perjalanan")
+  Sampah_telah_dijemput @map("Sampah telah dijemput")
+  Pesanan_Selesai       @map("Pesanan Selesai")
+  Penjemputan_Gagal     @map("Penjemputan Gagal")
+}
+
+enum vw_waste_type_category_Waste_Type {
+  Peralatan_rumah_tangga_besar @map("Peralatan rumah tangga besar")
+  Peralatan_rumah_tangga_kecil @map("Peralatan rumah tangga kecil")
+  Peralatan_IT                 @map("Peralatan IT")
+  Lampu
+  Mainan
+  Peralatan_elektronik_lainnya @map("Peralatan elektronik lainnya")
+
+  @@map("vw_waste_type_category_Waste Type")
+}
+
+enum view_dropbox_status_district_address {
+  Bandung_Utara           @map("Bandung Utara")
+  Bandung_Selatan         @map("Bandung Selatan")
+  Bandung_Timur           @map("Bandung Timur")
+  Bandung_Barat           @map("Bandung Barat")
+  Cimahi
+  Kabupaten_Bandung       @map("Kabupaten Bandung")
+  Kabupaten_Bandung_Barat @map("Kabupaten Bandung Barat")
+}
+
+enum view_total_pickup_history_pickup_status {
+  Menunggu_Penjemputan  @map("Menunggu Penjemputan")
+  Dalam_Perjalanan      @map("Dalam Perjalanan")
+  Sampah_telah_dijemput @map("Sampah telah dijemput")
+  Pesanan_Selesai       @map("Pesanan Selesai")
+  Penjemputan_Gagal     @map("Penjemputan Gagal")
+}
+
+enum vw_history_courier_pickup_status {
+  Menunggu_Penjemputan  @map("Menunggu Penjemputan")
+  Dalam_Perjalanan      @map("Dalam Perjalanan")
+  Sampah_telah_dijemput @map("Sampah telah dijemput")
+  Pesanan_Selesai       @map("Pesanan Selesai")
+  Penjemputan_Gagal     @map("Penjemputan Gagal")
+}
+
+enum cart_pickup_status {
+  Menunggu_Penjemputan  @map("Menunggu Penjemputan")
+  Dalam_Perjalanan      @map("Dalam Perjalanan")
+  Sampah_telah_dijemput @map("Sampah telah dijemput")
+  Pesanan_Selesai       @map("Pesanan Selesai")
+  Penjemputan_Gagal     @map("Penjemputan Gagal")
+}
+
 enum pickup_waste_pickup_status {
-  requested
-  accepted
-  completed
-  cancelled
+  Menunggu_Penjemputan  @map("Menunggu Penjemputan")
+  Dalam_Perjalanan      @map("Dalam Perjalanan")
+  Sampah_telah_dijemput @map("Sampah telah dijemput")
+  Pesanan_Selesai       @map("Pesanan Selesai")
+  Penjemputan_Gagal     @map("Penjemputan Gagal")
+}
+
+enum vw_pickup_requests_pickup_status {
+  Menunggu_Penjemputan  @map("Menunggu Penjemputan")
+  Dalam_Perjalanan      @map("Dalam Perjalanan")
+  Sampah_telah_dijemput @map("Sampah telah dijemput")
+  Pesanan_Selesai       @map("Pesanan Selesai")
+  Penjemputan_Gagal     @map("Penjemputan Gagal")
+}
+
+enum view_dropbox_status_status {
+  Full
+  Available
+}
+
+enum view_total_pickup_history_district_address {
+  Bandung_Utara           @map("Bandung Utara")
+  Bandung_Selatan         @map("Bandung Selatan")
+  Bandung_Timur           @map("Bandung Timur")
+  Bandung_Barat           @map("Bandung Barat")
+  Cimahi
+  Kabupaten_Bandung       @map("Kabupaten Bandung")
+  Kabupaten_Bandung_Barat @map("Kabupaten Bandung Barat")
+}
+
+enum vw_accepted_pickups_pickup_status {
+  Menunggu_Penjemputan  @map("Menunggu Penjemputan")
+  Dalam_Perjalanan      @map("Dalam Perjalanan")
+  Sampah_telah_dijemput @map("Sampah telah dijemput")
+  Pesanan_Selesai       @map("Pesanan Selesai")
+  Penjemputan_Gagal     @map("Penjemputan Gagal")
+}
+
+enum vw_ftr_history_done_pickup_status {
+  Menunggu_Penjemputan  @map("Menunggu Penjemputan")
+  Dalam_Perjalanan      @map("Dalam Perjalanan")
+  Sampah_telah_dijemput @map("Sampah telah dijemput")
+  Pesanan_Selesai       @map("Pesanan Selesai")
+  Penjemputan_Gagal     @map("Penjemputan Gagal")
+}
+
+enum vw_ftr_history_reject_pickup_status {
+  Menunggu_Penjemputan  @map("Menunggu Penjemputan")
+  Dalam_Perjalanan      @map("Dalam Perjalanan")
+  Sampah_telah_dijemput @map("Sampah telah dijemput")
+  Pesanan_Selesai       @map("Pesanan Selesai")
+  Penjemputan_Gagal     @map("Penjemputan Gagal")
+}
+
+enum vw_ftr_ongoing_pickup_status {
+  Menunggu_Penjemputan  @map("Menunggu Penjemputan")
+  Dalam_Perjalanan      @map("Dalam Perjalanan")
+  Sampah_telah_dijemput @map("Sampah telah dijemput")
+  Pesanan_Selesai       @map("Pesanan Selesai")
+  Penjemputan_Gagal     @map("Penjemputan Gagal")
+}
+
+enum vw_history_courier_district_address {
+  Bandung_Utara           @map("Bandung Utara")
+  Bandung_Selatan         @map("Bandung Selatan")
+  Bandung_Timur           @map("Bandung Timur")
+  Bandung_Barat           @map("Bandung Barat")
+  Cimahi
+  Kabupaten_Bandung       @map("Kabupaten Bandung")
+  Kabupaten_Bandung_Barat @map("Kabupaten Bandung Barat")
+}
+
+enum vw_pickup_tracking_pickup_status {
+  Menunggu_Penjemputan  @map("Menunggu Penjemputan")
+  Dalam_Perjalanan      @map("Dalam Perjalanan")
+  Sampah_telah_dijemput @map("Sampah telah dijemput")
+  Pesanan_Selesai       @map("Pesanan Selesai")
+  Penjemputan_Gagal     @map("Penjemputan Gagal")
+}
+
+enum view_total_pickup_history_waste_type_name {
+  Peralatan_rumah_tangga_besar @map("Peralatan rumah tangga besar")
+  Peralatan_rumah_tangga_kecil @map("Peralatan rumah tangga kecil")
+  Peralatan_IT                 @map("Peralatan IT")
+  Lampu
+  Mainan
+  Peralatan_elektronik_lainnya @map("Peralatan elektronik lainnya")
+}
+
+enum vw_courier_profile_status {
+  Pending
+  Approved
+  Reject
 }
