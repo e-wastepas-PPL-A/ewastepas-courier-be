@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "dragon-breath-423920",
+  "private_key_id": "1f21414a5d219f9c05610e77c0317aa1af9c6f3d",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDk6Q5jF30k7pAt\nCHzwoRVGi0iucaO3XnIER93dX3tC2taerPeDTiE14+FeQWKbypwZxh/xMhwOV5rJ\nQn9eAPgV7s/fanB1gIn57Zynb37BWKuaDaeceSNwdd6DUakNbuX2ZwyYicPsys6P\ne7kSq8yz4AJ2b5t3ADF4BTapoSHHv/Q8c/nJqAeSS6GZWTMctwhMO7oaIQhRvIcR\nfo1c0MU/0Oi4lEDuVdSRjV8sz534wSrqux5FPdgExXzcV490u5S4X90IdkUF+HZ2\ncVpITKG6YB8bHbahXD/oHdieiFv0d2VtsGaet59F+knbY2O2LyVGWK2Xd9OdnDA0\nyffN61GxAgMBAAECggEARzXXE211sV0DffbjgynhR/pBaH8SmpMnbfx7YQf4fOI+\nHMubDf5qp2yWKe+2QNfFOuFfA3X+s1l+XfixTamIg64wfYSLqooLojPQZWfyayxt\n6bUwvKUUqMIKMBjhubuTj1UcXoGQ8SNgIdOvzcajHhvkODrdBqaJPRiGGjv1mcEf\nB7GO9Z07799hO6jC9LejU5O5o2qF6V7uDlOH5nH6dXT/fjJ3sUjY3N+qAQX/ONdx\nFDlIB2NxSVSSXSxM8yyRgB5voi7aWoS5Lz0C5herwHbEPQT3xi+B1PkrILkG/f6U\nVRUmYWlvREsr8kJ6Vm8iolRpdAtoKkjAn5KI1lzK/wKBgQD5YFrsUbKf9+S0TcPw\nsfBMrlZ/O5tfhnaMC635Pvh+tPLKcYYJJHFbsn6yHnuWkJwrDNFtrXID6JFGVmnx\n493C3LaltAYgo6JaqH6aU1tYCHhC10TK7XgKmFKmqaescw8QOzs0IZeCwws6moG4\nanmjRh2udSP4RrPY67tSFnFe9wKBgQDq/Yqjg0t+LcN//q31AVYeEKNV/W2tnf1U\nDYk6fktiWAUQRKHxWT1KS7Ka/aPuNR/iNLAR9jxQ0FG5n+5a08fuZA2Fs3lFOLdW\nxw707qnN8MiA9imjSuBIt+UpQZDcHoXEle6r3HbwVYXzWnEQyVbavVi2/XNDyKju\nQ2LI46yilwKBgQD4ALNrwfP60vVHuu7aOJvaJqcu8YCbh4Xt0M+7yLwohpvOaQf7\nn5p8rw8A5P/TxQ0KYz0D7jItYOTZJqdGQG8Sk52xPU+6tgGIV3lQ0QVOj13KW3u2\ntGNlZgcMaDywa9zXL5C5T472JDLOnUnUtU8y6VArZ6PWDbpeSFGKWXd2EQKBgFfB\nGzb43wZd3LY9y4TFXP2ZRQXlwEGn0GTFMUwQweIV8L4kgz14D/Vg03Ah7EgWurNk\n7aOnitq7EOn7Ga39jJov7wTRAyagiYb0i1dYkT0BAD94rg/29E7zrbZ8b7ZkB5xk\nSV8Q07Honj9EtRiJt8+0Ch88AwF7O+rOa2ON8ng9AoGBAJxDtIqSe4eyVrmELwrH\n7B7x8VI4Oy/+MdjQob5PVDdOBEHsbl3euoXVWBhQpCgN3gE0faL7UtdvVOUF+KoM\nglnhtGaBfAX3Z0ivLVsCicuIFu5t34wHR9OfegNDxJRCVYh1VZx5vdf1OsNlj9gq\nWe4Hot8KyQQBuhUf+w4ALUYX\n-----END PRIVATE KEY-----\n",
+  "client_email": "logging-service-account@dragon-breath-423920.iam.gserviceaccount.com",
+  "client_id": "100289221176850638871",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/logging-service-account%40dragon-breath-423920.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
