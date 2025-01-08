@@ -1,7 +1,7 @@
 import { prisma } from '../database.js';
 import { logger } from '../utils/logger.js';
 
-const DEFAULT_PAGE_SIZE = 10;
+const DEFAULT_PAGE_SIZE = 1000;
 const DEFAULT_PAGE = 1;
 
 const PickupStatus = {
