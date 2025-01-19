@@ -76,46 +76,94 @@ class PickupService {
         { status: PickupStatus.FINISHED, field: 'totalFinished' }
     ];
 
+    static getJakartaDate(date = new Date()) {
+        const jakartaOffset = 7 * 60;
+        const userOffset = date.getTimezoneOffset();
+        const offsetDiff = jakartaOffset + userOffset;
+        const jakartaDate = new Date(date.getTime() + offsetDiff * 60 * 1000);
+        return jakartaDate;
+    }
+
     static async calculateTotals(courierId, options = {}) {
         const { timeFrame = 'day' } = options;
-        const now = new Date();
-
-        // Set current date to start of day
-        const currentDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const jakartaNow = this.getJakartaDate();
         let startDate, endDate;
 
         switch (timeFrame) {
-            case 'day':
-                // Current day: from 00:00:00 to 23:59:59
-                startDate = currentDate;
-                endDate = new Date(currentDate.getTime());
-                endDate.setHours(23, 59, 59, 999);
+            case 'day': {
+                // Set to start of day in GMT+7
+                startDate = new Date(
+                    jakartaNow.getFullYear(),
+                    jakartaNow.getMonth(),
+                    jakartaNow.getDate(),
+                    0, 0, 0
+                );
+                endDate = new Date(
+                    jakartaNow.getFullYear(),
+                    jakartaNow.getMonth(),
+                    jakartaNow.getDate(),
+                    23, 59, 59, 999
+                );
                 break;
-            case 'week':
-                // Current week: from current day to next 7 days
-                startDate = currentDate;
-                endDate = new Date(currentDate.getTime());
-                endDate.setDate(endDate.getDate() + 6);
-                endDate.setHours(23, 59, 59, 999);
+            }
+            case 'week': {
+                startDate = new Date(
+                    jakartaNow.getFullYear(),
+                    jakartaNow.getMonth(),
+                    jakartaNow.getDate(),
+                    0, 0, 0
+                );
+                endDate = new Date(
+                    jakartaNow.getFullYear(),
+                    jakartaNow.getMonth(),
+                    jakartaNow.getDate() + 6,
+                    23, 59, 59, 999
+                );
                 break;
-            case 'month':
-                // Current month
-                startDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-                endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0, 23, 59, 59, 999);
+            }
+            case 'month': {
+                startDate = new Date(
+                    jakartaNow.getFullYear(),
+                    jakartaNow.getMonth(),
+                    1,
+                    0, 0, 0
+                );
+                endDate = new Date(
+                    jakartaNow.getFullYear(),
+                    jakartaNow.getMonth() + 1,
+                    0,
+                    23, 59, 59, 999
+                );
                 break;
-            case 'year':
-                // Current year
-                startDate = new Date(currentDate.getFullYear(), 0, 1);
-                endDate = new Date(currentDate.getFullYear(), 11, 31, 23, 59, 59, 999);
+            }
+            case 'year': {
+                startDate = new Date(
+                    jakartaNow.getFullYear(),
+                    0,
+                    1,
+                    0, 0, 0
+                );
+                endDate = new Date(
+                    jakartaNow.getFullYear(),
+                    11,
+                    31,
+                    23, 59, 59, 999
+                );
                 break;
+            }
             default:
                 throw new Error('Invalid time frame');
         }
 
-        logger.info('Date range for calculation:', {
+        // Convert dates back to UTC for database query
+        const utcStartDate = new Date(startDate.getTime() - (7 * 60 * 60 * 1000));
+        const utcEndDate = new Date(endDate.getTime() - (7 * 60 * 60 * 1000));
+
+        logger.info('Date range for calculation (Jakarta Time):', {
             timeFrame,
             startDate: startDate.toISOString(),
-            endDate: endDate.toISOString()
+            endDate: endDate.toISOString(),
+            jakartaNow: jakartaNow.toISOString()
         });
 
         const totals = await Promise.all(
@@ -124,10 +172,20 @@ class PickupService {
                     where: {
                         courier_id: courierId,
                         pickup_status: status,
-                        pickup_date: {
-                            gte: startDate,
-                            lte: endDate
+                        created_at: {  // Changed from pickup_date to created_at
+                            gte: utcStartDate,
+                            lte: utcEndDate
                         }
+                    }
+                });
+
+                logger.debug('Count result:', {
+                    status,
+                    count,
+                    timeFrame,
+                    queryRange: {
+                        start: utcStartDate.toISOString(),
+                        end: utcEndDate.toISOString()
                     }
                 });
 
@@ -138,20 +196,17 @@ class PickupService {
         return {
             timeFrame,
             ...Object.assign({}, ...totals),
-            startDate,
-            endDate
+            startDate: startDate,
+            endDate: endDate
         };
     }
 
     static async getDetailedPickupTotals(courierId, options = {}) {
-        // Remove any potential custom date range from options
-        const { startDate, endDate, ...otherOptions } = options;
-
         const [day, week, month, year] = await Promise.all([
-            this.calculateTotals(courierId, { ...otherOptions, timeFrame: 'day' }),
-            this.calculateTotals(courierId, { ...otherOptions, timeFrame: 'week' }),
-            this.calculateTotals(courierId, { ...otherOptions, timeFrame: 'month' }),
-            this.calculateTotals(courierId, { ...otherOptions, timeFrame: 'year' })
+            this.calculateTotals(courierId, { ...options, timeFrame: 'day' }),
+            this.calculateTotals(courierId, { ...options, timeFrame: 'week' }),
+            this.calculateTotals(courierId, { ...options, timeFrame: 'month' }),
+            this.calculateTotals(courierId, { ...options, timeFrame: 'year' })
         ]);
 
         return { day, week, month, year };
@@ -319,39 +374,21 @@ export const updatePickupStatusToCompleted = (req, res) =>
 export const getCalculatePickupTotals = async (req, res) =>
     handleResponse(res, async () => {
         const courierId = validateId(req.params.id, 'courier');
-        const { timePeriod, startDate, endDate } = req.query;
+        const { timePeriod } = req.query;
 
-        const options = {};
-
-        if (timePeriod) {
-            if (!['day', 'week', 'month', 'year'].includes(timePeriod)) {
-                throw new Error('Invalid time period. Must be day, week, month, or year.');
-            }
-            options.timeFrame = timePeriod;
-        }
-
-        if (startDate) {
-            const parsedStartDate = new Date(startDate);
-            if (isNaN(parsedStartDate.getTime())) throw new Error('Invalid start date format');
-            options.startDate = parsedStartDate;
-        }
-
-        if (endDate) {
-            const parsedEndDate = new Date(endDate);
-            if (isNaN(parsedEndDate.getTime())) throw new Error('Invalid end date format');
-            options.endDate = parsedEndDate;
-        }
-
-        if (options.startDate && options.endDate && options.startDate >= options.endDate) {
-            throw new Error('Start date must be before end date');
-        }
+        const options = {
+            timeFrame: timePeriod
+        };
 
         const totals = timePeriod
             ? await PickupService.calculateTotals(courierId, options)
             : await PickupService.getDetailedPickupTotals(courierId, options);
 
         logger.info('Pickup totals calculated', {
-            context: { courierId, timePeriod: timePeriod || 'all periods', dateRange: { start: options.startDate, end: options.endDate } },
+            context: {
+                courierId,
+                timePeriod: timePeriod || 'all periods'
+            },
             totals
         });
 
