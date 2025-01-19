@@ -77,55 +77,70 @@ class PickupService {
     ];
 
     static async calculateTotals(courierId, options = {}) {
-        // const { timeFrame = 'day', startDate: customStartDate, endDate: customEndDate } = options;
-        //
-        // let startDate = customStartDate;
-        // let endDate = customEndDate;
+        const { timeFrame = 'day', startDate: customStartDate, endDate: customEndDate } = options;
+
+        let startDate = customStartDate;
+        let endDate = customEndDate;
 
         if (!startDate || !endDate) {
             const now = new Date();
-            let startDate, endDate;
+
+            // Set time to start of day for consistent comparisons
+            now.setHours(0, 0, 0, 0);
 
             switch (timeFrame) {
                 case 'day':
-                    // Set startDate to the beginning of the current day
-                    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-                    // Set endDate to the beginning of the next day
-                    endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
+                    startDate = new Date(now);
+                    endDate = new Date(now);
+                    endDate.setDate(endDate.getDate() + 1);
                     break;
                 case 'week':
-                    // Set startDate to the beginning of the current week (Sunday)
-                    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay(), 0, 0, 0);
-                    // Set endDate to the beginning of the next week (Sunday)
-                    endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay() + 7, 0, 0, 0);
+                    startDate = new Date(now);
+                    startDate.setDate(now.getDate() - now.getDay()); // Start of week (Sunday)
+                    endDate = new Date(startDate);
+                    endDate.setDate(endDate.getDate() + 7);
                     break;
                 case 'month':
-                    // Set startDate to the beginning of the current month
-                    startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
-                    // Set endDate to the beginning of the next month
-                    endDate = new Date(now.getFullYear(), now.getMonth() + 1, 1, 0, 0, 0);
+                    startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                    endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
                     break;
                 case 'year':
-                    // Set startDate to the beginning of the current year
-                    startDate = new Date(now.getFullYear(), 0, 1, 0, 0, 0);
-                    // Set endDate to the beginning of the next year
-                    endDate = new Date(now.getFullYear() + 1, 0, 1, 0, 0, 0);
+                    startDate = new Date(now.getFullYear(), 0, 1);
+                    endDate = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
                     break;
                 default:
                     throw new Error('Invalid time frame');
             }
         }
 
+        logger.info('Calculating totals with date range:', {
+            timeFrame,
+            startDate: startDate.toISOString(),
+            endDate: endDate.toISOString(),
+            courierId
+        });
+
         const totals = await Promise.all(
-            this.#STATUSES.map(async ({ status, field }) => ({
-                [field]: await prisma.pickup_waste.count({
+            this.#STATUSES.map(async ({ status, field }) => {
+                const count = await prisma.pickup_waste.count({
                     where: {
                         courier_id: courierId,
                         pickup_status: status,
-                        created_at: { gte: startDate, lt: endDate }
+                        created_at: {
+                            gte: startDate,
+                            lte: endDate
+                        }
                     }
-                })
-            }))
+                });
+
+                logger.debug('Count for status:', {
+                    status,
+                    count,
+                    dateRange: { start: startDate, end: endDate }
+                });
+
+                return { [field]: count };
+            })
         );
 
         return {
