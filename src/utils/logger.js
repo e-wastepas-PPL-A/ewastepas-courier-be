@@ -1,5 +1,4 @@
 import winston from 'winston';
-import { LoggingWinston } from "@google-cloud/logging-winston";
 
 const customLevels = {
     levels: {
@@ -23,7 +22,8 @@ export const logger = winston.createLogger({
     level: 'debug',
     format: winston.format.combine(
         winston.format.timestamp(),
-        winston.format.json()
+        winston.format.json(),
+        winston.format.prettyPrint()
     ),
     transports: [
         new winston.transports.Console({
@@ -33,8 +33,5 @@ export const logger = winston.createLogger({
             )
         }),
         new winston.transports.File({ filename: 'logs/app.log' }),
-        new LoggingWinston({
-            projectId: 'dragon-breath-423920',
-        })
     ]
 });
