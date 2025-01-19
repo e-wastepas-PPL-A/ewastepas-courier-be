@@ -379,7 +379,7 @@
 
 - Req Example:
   - GET 
-  - `/api/pickup-history/courier?courierId=3&status=completed&startDate=2024-01-01&endDate=2024-12-31&search=Jl.%20Dipatiukur&sortBy=pickup_date&order=desc&page=1&limit=5`
+  - `/api/pickup/courier/history?courierId=3&status=completed&startDate=2024-01-01&endDate=2024-12-31&search=Jl.%20Dipatiukur&sortBy=pickup_date&order=desc&page=1&limit=5`
 
 - Response:
 ```json
