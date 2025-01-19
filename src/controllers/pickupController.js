@@ -76,117 +76,68 @@ class PickupService {
         { status: PickupStatus.FINISHED, field: 'totalFinished' }
     ];
 
-    static getJakartaDate(date = new Date()) {
-        const jakartaOffset = 7 * 60;
-        const userOffset = date.getTimezoneOffset();
-        const offsetDiff = jakartaOffset + userOffset;
-        const jakartaDate = new Date(date.getTime() + offsetDiff * 60 * 1000);
-        return jakartaDate;
-    }
-
     static async calculateTotals(courierId, options = {}) {
         const { timeFrame = 'day' } = options;
-        const jakartaNow = this.getJakartaDate();
+        const now = new Date();
         let startDate, endDate;
 
         switch (timeFrame) {
-            case 'day': {
-                // Set to start of day in GMT+7
-                startDate = new Date(
-                    jakartaNow.getFullYear(),
-                    jakartaNow.getMonth(),
-                    jakartaNow.getDate(),
-                    0, 0, 0
-                );
-                endDate = new Date(
-                    jakartaNow.getFullYear(),
-                    jakartaNow.getMonth(),
-                    jakartaNow.getDate(),
-                    23, 59, 59, 999
-                );
+            case 'day':
+                // Set start date to beginning of current day (00:00:00)
+                startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+                // Set end date to end of current day (23:59:59.999)
+                endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
                 break;
-            }
-            case 'week': {
-                startDate = new Date(
-                    jakartaNow.getFullYear(),
-                    jakartaNow.getMonth(),
-                    jakartaNow.getDate(),
-                    0, 0, 0
-                );
-                endDate = new Date(
-                    jakartaNow.getFullYear(),
-                    jakartaNow.getMonth(),
-                    jakartaNow.getDate() + 6,
-                    23, 59, 59, 999
-                );
+            case 'week':
+                startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 6, 23, 59, 59, 999);
                 break;
-            }
-            case 'month': {
-                startDate = new Date(
-                    jakartaNow.getFullYear(),
-                    jakartaNow.getMonth(),
-                    1,
-                    0, 0, 0
-                );
-                endDate = new Date(
-                    jakartaNow.getFullYear(),
-                    jakartaNow.getMonth() + 1,
-                    0,
-                    23, 59, 59, 999
-                );
+            case 'month':
+                startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
                 break;
-            }
-            case 'year': {
-                startDate = new Date(
-                    jakartaNow.getFullYear(),
-                    0,
-                    1,
-                    0, 0, 0
-                );
-                endDate = new Date(
-                    jakartaNow.getFullYear(),
-                    11,
-                    31,
-                    23, 59, 59, 999
-                );
+            case 'year':
+                startDate = new Date(now.getFullYear(), 0, 1);
+                endDate = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
                 break;
-            }
             default:
                 throw new Error('Invalid time frame');
         }
 
-        // Convert dates back to UTC for database query
-        const utcStartDate = new Date(startDate.getTime() - (7 * 60 * 60 * 1000));
-        const utcEndDate = new Date(endDate.getTime() - (7 * 60 * 60 * 1000));
-
-        logger.info('Date range for calculation (Jakarta Time):', {
+        logger.info('Date range for calculation:', {
             timeFrame,
             startDate: startDate.toISOString(),
-            endDate: endDate.toISOString(),
-            jakartaNow: jakartaNow.toISOString()
+            endDate: endDate.toISOString()
         });
 
         const totals = await Promise.all(
             this.#STATUSES.map(async ({ status, field }) => {
+                // Debug log to see what's being queried
+                logger.debug('Querying status:', {
+                    status,
+                    courierId,
+                    dateRange: {
+                        start: startDate.toISOString(),
+                        end: endDate.toISOString()
+                    }
+                });
+
                 const count = await prisma.pickup_waste.count({
                     where: {
                         courier_id: courierId,
                         pickup_status: status,
-                        created_at: {  // Changed from pickup_date to created_at
-                            gte: utcStartDate,
-                            lte: utcEndDate
+                        updated_at: {
+                            gte: startDate,
+                            lte: endDate
                         }
                     }
                 });
 
+                // Debug log for count result
                 logger.debug('Count result:', {
                     status,
                     count,
-                    timeFrame,
-                    queryRange: {
-                        start: utcStartDate.toISOString(),
-                        end: utcEndDate.toISOString()
-                    }
+                    timeFrame
                 });
 
                 return { [field]: count };
@@ -196,8 +147,8 @@ class PickupService {
         return {
             timeFrame,
             ...Object.assign({}, ...totals),
-            startDate: startDate,
-            endDate: endDate
+            startDate,
+            endDate
         };
     }
 
