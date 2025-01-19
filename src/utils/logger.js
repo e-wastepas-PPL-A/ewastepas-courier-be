@@ -1,4 +1,5 @@
 import winston from 'winston';
+import DailyRotateFile from 'winston-daily-rotate-file';
 
 const customLevels = {
     levels: {
@@ -17,21 +18,46 @@ const customLevels = {
 
 winston.addColors(customLevels.colors);
 
+const consoleFormat = winston.format.combine(
+    winston.format.colorize({ all: true }),
+    winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+    winston.format.align(),
+    winston.format.printf((info) => {
+        const { timestamp, level, message, ...args } = info;
+        return `${timestamp} [${level}]: ${message} ${Object.keys(args).length ? JSON.stringify(args, null, 2) : ''}`;
+    })
+);
+
+const fileFormat = winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.json(),
+    winston.format.prettyPrint()
+);
+
 export const logger = winston.createLogger({
     levels: customLevels.levels,
     level: 'debug',
-    format: winston.format.combine(
-        winston.format.timestamp(),
-        winston.format.json(),
-        winston.format.prettyPrint()
-    ),
+    format: fileFormat,
     transports: [
         new winston.transports.Console({
-            format: winston.format.combine(
-                winston.format.colorize(),
-                winston.format.simple()
-            )
+            format: consoleFormat,
         }),
-        new winston.transports.File({ filename: 'logs/app.log' }),
+        new DailyRotateFile({
+            filename: 'logs/app-%DATE%.log',
+            datePattern: 'YYYY-MM-DD',
+            zippedArchive: true,
+            maxSize: '20m',
+            maxFiles: '14d', // Automatically delete logs older than 14 days
+            format: fileFormat,
+        }),
+        new DailyRotateFile({
+            filename: 'logs/error-%DATE%.log',
+            datePattern: 'YYYY-MM-DD',
+            zippedArchive: true,
+            maxSize: '20m',
+            maxFiles: '14d', // Automatically delete logs older than 14 days
+            level: 'error',
+            format: fileFormat,
+        }),
     ]
 });
