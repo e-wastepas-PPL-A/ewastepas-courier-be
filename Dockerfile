@@ -1,5 +1,7 @@
 # Gunakan base image yang mendukung OpenSSL 3.0
-FROM node:18-bullseye
+FROM node:18-alpine
+
+RUN apk add --no-cache openssl
 
 # Setel direktori kerja di dalam container
 WORKDIR /app
