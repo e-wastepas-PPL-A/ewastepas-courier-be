@@ -77,29 +77,39 @@ class PickupService {
     ];
 
     static async calculateTotals(courierId, options = {}) {
-        const { timeFrame = 'day', startDate: customStartDate, endDate: customEndDate } = options;
-
-        let startDate = customStartDate;
-        let endDate = customEndDate;
+        // const { timeFrame = 'day', startDate: customStartDate, endDate: customEndDate } = options;
+        //
+        // let startDate = customStartDate;
+        // let endDate = customEndDate;
 
         if (!startDate || !endDate) {
             const now = new Date();
+            let startDate, endDate;
+
             switch (timeFrame) {
                 case 'day':
-                    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                    endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+                    // Set startDate to the beginning of the current day
+                    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+                    // Set endDate to the beginning of the next day
+                    endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
                     break;
                 case 'week':
-                    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay());
-                    endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay() + 7);
+                    // Set startDate to the beginning of the current week (Sunday)
+                    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay(), 0, 0, 0);
+                    // Set endDate to the beginning of the next week (Sunday)
+                    endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay() + 7, 0, 0, 0);
                     break;
                 case 'month':
-                    startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-                    endDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+                    // Set startDate to the beginning of the current month
+                    startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+                    // Set endDate to the beginning of the next month
+                    endDate = new Date(now.getFullYear(), now.getMonth() + 1, 1, 0, 0, 0);
                     break;
                 case 'year':
-                    startDate = new Date(now.getFullYear(), 0, 1);
-                    endDate = new Date(now.getFullYear() + 1, 0, 1);
+                    // Set startDate to the beginning of the current year
+                    startDate = new Date(now.getFullYear(), 0, 1, 0, 0, 0);
+                    // Set endDate to the beginning of the next year
+                    endDate = new Date(now.getFullYear() + 1, 0, 1, 0, 0, 0);
                     break;
                 default:
                     throw new Error('Invalid time frame');
