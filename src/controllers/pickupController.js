@@ -77,47 +77,45 @@ class PickupService {
     ];
 
     static async calculateTotals(courierId, options = {}) {
-        const { timeFrame = 'day', startDate: customStartDate, endDate: customEndDate } = options;
+        const { timeFrame = 'day' } = options;
+        const now = new Date();
 
-        let startDate = customStartDate;
-        let endDate = customEndDate;
+        // Set current date to start of day
+        const currentDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        let startDate, endDate;
 
-        if (!startDate || !endDate) {
-            const now = new Date();
-
-            // Set time to start of day for consistent comparisons
-            now.setHours(0, 0, 0, 0);
-
-            switch (timeFrame) {
-                case 'day':
-                    startDate = new Date(now);
-                    endDate = new Date(now);
-                    endDate.setDate(endDate.getDate() + 1);
-                    break;
-                case 'week':
-                    startDate = new Date(now);
-                    startDate.setDate(now.getDate() - now.getDay()); // Start of week (Sunday)
-                    endDate = new Date(startDate);
-                    endDate.setDate(endDate.getDate() + 7);
-                    break;
-                case 'month':
-                    startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-                    endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-                    break;
-                case 'year':
-                    startDate = new Date(now.getFullYear(), 0, 1);
-                    endDate = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
-                    break;
-                default:
-                    throw new Error('Invalid time frame');
-            }
+        switch (timeFrame) {
+            case 'day':
+                // Current day: from 00:00:00 to 23:59:59
+                startDate = currentDate;
+                endDate = new Date(currentDate.getTime());
+                endDate.setHours(23, 59, 59, 999);
+                break;
+            case 'week':
+                // Current week: from current day to next 7 days
+                startDate = currentDate;
+                endDate = new Date(currentDate.getTime());
+                endDate.setDate(endDate.getDate() + 6);
+                endDate.setHours(23, 59, 59, 999);
+                break;
+            case 'month':
+                // Current month
+                startDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+                endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0, 23, 59, 59, 999);
+                break;
+            case 'year':
+                // Current year
+                startDate = new Date(currentDate.getFullYear(), 0, 1);
+                endDate = new Date(currentDate.getFullYear(), 11, 31, 23, 59, 59, 999);
+                break;
+            default:
+                throw new Error('Invalid time frame');
         }
 
-        logger.info('Calculating totals with date range:', {
+        logger.info('Date range for calculation:', {
             timeFrame,
             startDate: startDate.toISOString(),
-            endDate: endDate.toISOString(),
-            courierId
+            endDate: endDate.toISOString()
         });
 
         const totals = await Promise.all(
@@ -126,17 +124,11 @@ class PickupService {
                     where: {
                         courier_id: courierId,
                         pickup_status: status,
-                        created_at: {
+                        pickup_date: {
                             gte: startDate,
                             lte: endDate
                         }
                     }
-                });
-
-                logger.debug('Count for status:', {
-                    status,
-                    count,
-                    dateRange: { start: startDate, end: endDate }
                 });
 
                 return { [field]: count };
@@ -152,11 +144,14 @@ class PickupService {
     }
 
     static async getDetailedPickupTotals(courierId, options = {}) {
+        // Remove any potential custom date range from options
+        const { startDate, endDate, ...otherOptions } = options;
+
         const [day, week, month, year] = await Promise.all([
-            this.calculateTotals(courierId, { ...options, timeFrame: 'day' }),
-            this.calculateTotals(courierId, { ...options, timeFrame: 'week' }),
-            this.calculateTotals(courierId, { ...options, timeFrame: 'month' }),
-            this.calculateTotals(courierId, { ...options, timeFrame: 'year' })
+            this.calculateTotals(courierId, { ...otherOptions, timeFrame: 'day' }),
+            this.calculateTotals(courierId, { ...otherOptions, timeFrame: 'week' }),
+            this.calculateTotals(courierId, { ...otherOptions, timeFrame: 'month' }),
+            this.calculateTotals(courierId, { ...otherOptions, timeFrame: 'year' })
         ]);
 
         return { day, week, month, year };
